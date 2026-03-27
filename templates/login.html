@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CEOMonitor — Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0b1120;
+            color: #f1f5f9;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background:
+                radial-gradient(ellipse at 20% 50%, rgba(6, 182, 212, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 40% 80%, rgba(139, 92, 246, 0.05) 0%, transparent 50%);
+            animation: drift 20s ease-in-out infinite;
+        }
+
+        @keyframes drift {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(2%, -1%) rotate(1deg); }
+            66% { transform: translate(-1%, 2%) rotate(-1deg); }
+        }
+
+        /* Grid lines background */
+        body::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(6, 182, 212, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(6, 182, 212, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        .login-container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 440px;
+            padding: 0 1.5rem;
+        }
+
+        /* Logo area */
+        .logo-section {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo-icon {
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 1.25rem;
+            background: linear-gradient(135deg, #06b6d4, #3b82f6);
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 32px rgba(6, 182, 212, 0.25);
+        }
+
+        .logo-icon svg {
+            width: 40px;
+            height: 40px;
+            fill: white;
+        }
+
+        .logo-title {
+            font-size: 1.75rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            margin-bottom: 0.35rem;
+        }
+
+        .logo-title span { color: #06b6d4; }
+
+        .logo-subtitle {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            font-weight: 400;
+        }
+
+        .logo-subtitle a {
+            color: #06b6d4;
+            text-decoration: none;
+        }
+
+        /* Card */
+        .login-card {
+            background: rgba(26, 34, 53, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid #2a3550;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 16px 64px rgba(0, 0, 0, 0.4);
+        }
+
+        .login-card h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #f1f5f9;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #94a3b8;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: #111827;
+            border: 1px solid #2a3550;
+            border-radius: 10px;
+            color: #f1f5f9;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: #06b6d4;
+            box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.15);
+        }
+
+        .form-group input::placeholder {
+            color: #475569;
+        }
+
+        .error-msg {
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            font-size: 0.78rem;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.25rem;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 0.8rem;
+            background: linear-gradient(135deg, #06b6d4, #3b82f6);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+            letter-spacing: 0.02em;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 24px rgba(6, 182, 212, 0.3);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Footer info */
+        .login-footer {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.68rem;
+            color: #475569;
+            line-height: 1.6;
+        }
+
+        /* Ticker tape */
+        .ticker-wrap {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(17, 24, 39, 0.9);
+            border-top: 1px solid #1e293b;
+            overflow: hidden;
+            height: 32px;
+            z-index: 10;
+        }
+
+        .ticker {
+            display: flex;
+            animation: ticker 60s linear infinite;
+            white-space: nowrap;
+            height: 100%;
+            align-items: center;
+        }
+
+        .ticker span {
+            font-size: 0.7rem;
+            color: #64748b;
+            padding: 0 2rem;
+        }
+
+        .ticker span strong {
+            color: #06b6d4;
+        }
+
+        @keyframes ticker {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        @media (max-width: 480px) {
+            .login-card { padding: 1.5rem; }
+            .logo-title { font-size: 1.4rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-container">
+    <div class="logo-section">
+        <div class="logo-icon">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+            </svg>
+        </div>
+        <div class="logo-title"><span>CEO</span>Monitor</div>
+        <div class="logo-subtitle">
+            UBL UK Executive Dashboard &nbsp;|&nbsp;
+            <a href="https://www.ubluk.com" target="_blank">www.ubluk.com</a>
+        </div>
+    </div>
+
+    <div class="login-card">
+        <h2>Sign in to continue</h2>
+
+        {% if error %}
+        <div class="error-msg">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('login') }}">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" placeholder="Enter your username" autocomplete="username" required autofocus>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="Enter your password" autocomplete="current-password" required>
+            </div>
+            <button type="submit" class="submit-btn">Sign In</button>
+        </form>
+    </div>
+
+    <div class="login-footer">
+        Secured executive access &nbsp;|&nbsp; CEOMonitor v1.0<br>
+        United Bank Limited UK &nbsp;|&nbsp; PRA & FCA Authorised
+    </div>
+</div>
+
+<!-- Financial ticker tape -->
+<div class="ticker-wrap">
+    <div class="ticker">
+        <span><strong>FTSE 100</strong> London Stock Exchange</span>
+        <span><strong>GBP/USD</strong> Foreign Exchange</span>
+        <span><strong>SONIA</strong> Sterling Overnight Index Average</span>
+        <span><strong>UK Gilts</strong> Government Bonds</span>
+        <span><strong>BoE</strong> Bank of England Base Rate</span>
+        <span><strong>FCA</strong> Financial Conduct Authority</span>
+        <span><strong>SOFR</strong> Secured Overnight Financing Rate</span>
+        <span><strong>US 10Y</strong> Treasury Yield</span>
+        <span><strong>ECB</strong> European Central Bank</span>
+        <span><strong>CPI</strong> Consumer Price Index</span>
+        <span><strong>FTSE 100</strong> London Stock Exchange</span>
+        <span><strong>GBP/USD</strong> Foreign Exchange</span>
+        <span><strong>SONIA</strong> Sterling Overnight Index Average</span>
+        <span><strong>UK Gilts</strong> Government Bonds</span>
+        <span><strong>BoE</strong> Bank of England Base Rate</span>
+        <span><strong>FCA</strong> Financial Conduct Authority</span>
+        <span><strong>SOFR</strong> Secured Overnight Financing Rate</span>
+        <span><strong>US 10Y</strong> Treasury Yield</span>
+        <span><strong>ECB</strong> European Central Bank</span>
+        <span><strong>CPI</strong> Consumer Price Index</span>
+    </div>
+</div>
+
+</body>
+</html>

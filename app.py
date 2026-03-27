@@ -5,35 +5,47 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from threading import Lock
 from html import unescape
+from functools import wraps
 import re
+import time
 
 import requests
-from flask import Flask, render_template, jsonify
-from dotenv import load_dotenv
-from apscheduler.schedulers.background import BackgroundScheduler
+from flask import Flask, render_template, jsonify, request, redirect, url_for, session
 
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-load_dotenv()
+# Try dotenv, fall back to os.environ
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 FRED_API_KEY = os.getenv("FRED_API_KEY")
 
 app = Flask(__name__)
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "ceomonitor-ubluk-2026-secret-key")
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Auth credentials
+# ---------------------------------------------------------------------------
+AUTH_USERNAME = "admin"
+AUTH_PASSWORD = "admin1"
 
 # ---------------------------------------------------------------------------
 # FRED series definitions
 # ---------------------------------------------------------------------------
 SERIES = {
-    # Central bank policy rates
     "central_banks": {
         "FEDFUNDS":          "Fed Funds Rate",
         "IUDSOIA":           "Bank of England (SONIA Proxy)",
         "ECBMLFR":           "ECB Main Refinancing Rate",
         "INTDSRJPM193N":     "Bank of Japan Rate",
     },
-    # US Treasury yields
     "us_treasuries": {
         "DGS1MO":  "1 Month",
         "DGS3MO":  "3 Month",
@@ -46,12 +58,10 @@ SERIES = {
         "DGS20":   "20 Year",
         "DGS30":   "30 Year",
     },
-    # UK & global bonds
     "bonds": {
         "IRLTLT01GBM156N": "UK Long-Term Gilt",
         "MORTGAGE30US":    "US 30-Year Mortgage",
     },
-    # Spreads & money markets
     "spreads": {
         "T10Y2Y":          "2s10s Spread",
         "SOFR":            "SOFR",
@@ -60,19 +70,16 @@ SERIES = {
         "TEDRATE":         "TED Spread",
         "DPRIME":          "US Prime Rate",
     },
-    # UK-specific rates
     "uk_rates": {
         "IR3TIB01GBM156N": "UK 3-Month Interbank",
         "INTDSRGBM193N":   "UK Short-Term Rate",
         "IRLTLT01GBQ156N": "UK Long-Term Govt Bond (Quarterly)",
     },
-    # FX rates
     "fx_rates": {
         "DEXUSUK":  "GBP/USD",
         "DEXUSEU":  "EUR/USD",
         "DEXJPUS":  "USD/JPY",
     },
-    # Inflation
     "inflation": {
         "CPIAUCSL":        "US CPI (Index)",
         "GBRCPIALLMINMEI": "UK CPI (Index)",
@@ -89,49 +96,19 @@ for group in SERIES.values():
 # ---------------------------------------------------------------------------
 NEWS_FEEDS = {
     "uk_finance": [
-        {
-            "name": "FT — UK Finance",
-            "url": "https://www.ft.com/rss/home/uk",
-            "icon": "📰",
-        },
-        {
-            "name": "BBC — Business",
-            "url": "http://feeds.bbci.co.uk/news/business/rss.xml",
-            "icon": "🔵",
-        },
-        {
-            "name": "The Guardian — Business",
-            "url": "https://www.theguardian.com/uk/business/rss",
-            "icon": "📊",
-        },
+        {"name": "BBC — Business", "url": "http://feeds.bbci.co.uk/news/business/rss.xml", "icon": "📰"},
+        {"name": "The Guardian — Business", "url": "https://www.theguardian.com/uk/business/rss", "icon": "📊"},
     ],
     "central_banking": [
-        {
-            "name": "Bank of England — News",
-            "url": "https://www.bankofengland.co.uk/rss/news",
-            "icon": "🏛️",
-        },
-        {
-            "name": "FCA — News",
-            "url": "https://www.fca.org.uk/news/rss.xml",
-            "icon": "⚖️",
-        },
+        {"name": "Bank of England — News", "url": "https://www.bankofengland.co.uk/rss/news", "icon": "🏛️"},
+        {"name": "FCA — News", "url": "https://www.fca.org.uk/news/rss.xml", "icon": "⚖️"},
     ],
     "global_markets": [
-        {
-            "name": "CNBC — Finance",
-            "url": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664",
-            "icon": "📈",
-        },
-        {
-            "name": "Bloomberg — Markets",
-            "url": "https://feeds.bloomberg.com/markets/news.rss",
-            "icon": "💹",
-        },
+        {"name": "CNBC — Finance", "url": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664", "icon": "📈"},
+        {"name": "Bloomberg — Markets", "url": "https://feeds.bloomberg.com/markets/news.rss", "icon": "💹"},
     ],
 }
 
-# Search queries for UBL UK mentions
 UBL_SEARCH_QUERIES = [
     "United Bank Limited UK",
     "UBL UK",
@@ -139,7 +116,7 @@ UBL_SEARCH_QUERIES = [
 ]
 
 # ---------------------------------------------------------------------------
-# Data cache
+# Time-based cache (no APScheduler needed)
 # ---------------------------------------------------------------------------
 _cache: dict = {
     "rates": {},
@@ -147,12 +124,16 @@ _cache: dict = {
     "ubl_mentions": [],
     "last_updated": None,
     "news_last_updated": None,
+    "rates_fetched_at": 0,
+    "news_fetched_at": 0,
 }
 _lock = Lock()
 
+RATES_CACHE_SECONDS = 1800   # 30 minutes
+NEWS_CACHE_SECONDS = 900     # 15 minutes
+
 
 def _fetch_fred_series(series_id: str) -> dict:
-    """Fetch the latest observation for a single FRED series."""
     url = "https://api.stlouisfed.org/fred/series/observations"
     params = {
         "series_id": series_id,
@@ -197,13 +178,11 @@ def _fetch_fred_series(series_id: str) -> dict:
 
 
 def _strip_html(text: str) -> str:
-    """Remove HTML tags from a string."""
     clean = re.sub(r"<[^>]+>", "", text)
     return unescape(clean).strip()
 
 
 def _parse_rss(url: str, max_items: int = 8) -> list[dict]:
-    """Fetch and parse an RSS feed, returning a list of articles."""
     try:
         headers = {
             "User-Agent": "CEOMonitor/1.0 (Financial Dashboard)",
@@ -213,12 +192,9 @@ def _parse_rss(url: str, max_items: int = 8) -> list[dict]:
         resp.raise_for_status()
 
         root = ET.fromstring(resp.content)
-
-        # Handle both RSS and Atom formats
         items = []
         ns = {"atom": "http://www.w3.org/2005/Atom"}
 
-        # RSS 2.0
         for item in root.findall(".//item")[:max_items]:
             title = item.findtext("title", "").strip()
             link = item.findtext("link", "").strip()
@@ -227,14 +203,8 @@ def _parse_rss(url: str, max_items: int = 8) -> list[dict]:
             if len(desc) > 200:
                 desc = desc[:200] + "…"
             if title:
-                items.append({
-                    "title": title,
-                    "link": link,
-                    "date": pub_date,
-                    "summary": desc,
-                })
+                items.append({"title": title, "link": link, "date": pub_date, "summary": desc})
 
-        # Atom format fallback
         if not items:
             for entry in root.findall("atom:entry", ns)[:max_items]:
                 title = entry.findtext("atom:title", "", ns).strip()
@@ -245,12 +215,7 @@ def _parse_rss(url: str, max_items: int = 8) -> list[dict]:
                 if len(desc) > 200:
                     desc = desc[:200] + "…"
                 if title:
-                    items.append({
-                        "title": title,
-                        "link": link,
-                        "date": pub_date or "",
-                        "summary": desc,
-                    })
+                    items.append({"title": title, "link": link, "date": pub_date or "", "summary": desc})
 
         return items
     except Exception as exc:
@@ -259,7 +224,6 @@ def _parse_rss(url: str, max_items: int = 8) -> list[dict]:
 
 
 def _search_google_news(query: str, max_items: int = 5) -> list[dict]:
-    """Search Google News RSS for mentions of a query."""
     try:
         encoded = requests.utils.quote(query)
         url = f"https://news.google.com/rss/search?q={encoded}&hl=en-GB&gl=GB&ceid=GB:en"
@@ -269,27 +233,31 @@ def _search_google_news(query: str, max_items: int = 5) -> list[dict]:
         return []
 
 
-def refresh_data():
-    """Fetch all FRED series and update cache."""
+def _ensure_rates():
+    """Refresh rates if cache is stale."""
+    now = time.time()
+    if now - _cache["rates_fetched_at"] < RATES_CACHE_SECONDS and _cache["rates"]:
+        return
     logger.info("Refreshing FRED data…")
-    rates: dict = {}
+    rates = {}
     for series_id, label in ALL_SERIES.items():
         data = _fetch_fred_series(series_id)
         data["label"] = label
         rates[series_id] = data
-
     with _lock:
         _cache["rates"] = rates
-        _cache["last_updated"] = datetime.now(timezone.utc).strftime(
-            "%Y-%m-%d %H:%M:%S UTC"
-        )
+        _cache["rates_fetched_at"] = now
+        _cache["last_updated"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     logger.info("FRED data refresh complete.")
 
 
-def refresh_news():
-    """Fetch all news feeds and UBL mentions."""
+def _ensure_news():
+    """Refresh news if cache is stale."""
+    now = time.time()
+    if now - _cache["news_fetched_at"] < NEWS_CACHE_SECONDS and _cache["news"]:
+        return
     logger.info("Refreshing news feeds…")
-    news: dict = {}
+    news = {}
     for category, feeds in NEWS_FEEDS.items():
         category_items = []
         for feed in feeds:
@@ -300,7 +268,6 @@ def refresh_news():
             category_items.extend(articles)
         news[category] = category_items
 
-    # UBL UK mentions from Google News
     ubl_mentions = []
     seen_titles = set()
     for query in UBL_SEARCH_QUERIES:
@@ -315,30 +282,53 @@ def refresh_news():
     with _lock:
         _cache["news"] = news
         _cache["ubl_mentions"] = ubl_mentions
-        _cache["news_last_updated"] = datetime.now(timezone.utc).strftime(
-            "%Y-%m-%d %H:%M:%S UTC"
-        )
+        _cache["news_fetched_at"] = now
+        _cache["news_last_updated"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     logger.info("News refresh complete — %d UBL mentions found.", len(ubl_mentions))
 
 
 # ---------------------------------------------------------------------------
-# Scheduler
+# Auth decorator
 # ---------------------------------------------------------------------------
-scheduler = BackgroundScheduler(daemon=True)
-scheduler.add_job(refresh_data, "interval", minutes=30, id="refresh_rates")
-scheduler.add_job(refresh_news, "interval", minutes=15, id="refresh_news")
-scheduler.start()
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("logged_in"):
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return decorated
 
-# Initial fetch
-refresh_data()
-refresh_news()
 
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
 
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    error = None
+    if request.method == "POST":
+        username = request.form.get("username", "")
+        password = request.form.get("password", "")
+        if username == AUTH_USERNAME and password == AUTH_PASSWORD:
+            session["logged_in"] = True
+            return redirect(url_for("dashboard"))
+        else:
+            error = "Invalid credentials. Please try again."
+    return render_template("login.html", error=error)
+
+
+@app.route("/logout")
+def logout():
+    session.pop("logged_in", None)
+    return redirect(url_for("login"))
+
+
 @app.route("/")
+@login_required
 def dashboard():
+    _ensure_rates()
+    _ensure_news()
+
     with _lock:
         rates = dict(_cache["rates"])
         news = dict(_cache["news"])
@@ -346,7 +336,6 @@ def dashboard():
         last_updated = _cache["last_updated"]
         news_last_updated = _cache["news_last_updated"]
 
-    # Build grouped rate data
     grouped: dict[str, list[dict]] = {}
     for group_key, series_map in SERIES.items():
         items = []
@@ -355,7 +344,6 @@ def dashboard():
             items.append({"id": sid, "label": label, **entry})
         grouped[group_key] = items
 
-    # Treasury yield-curve data for chart
     treasury_order = list(SERIES["us_treasuries"].keys())
     yc_labels = [SERIES["us_treasuries"][s] for s in treasury_order]
     yc_values = []
@@ -363,7 +351,6 @@ def dashboard():
         v = rates.get(sid, {}).get("value")
         yc_values.append(v if v is not None else "null")
 
-    # Health indicators
     spread_2s10s = rates.get("T10Y2Y", {}).get("value")
     hy_spread = rates.get("BAMLH0A0HYM2", {}).get("value")
     ted_spread = rates.get("TEDRATE", {}).get("value")
@@ -391,22 +378,19 @@ def dashboard():
 
 
 @app.route("/api/rates")
+@login_required
 def api_rates():
+    _ensure_rates()
     with _lock:
-        return jsonify({
-            "rates": _cache["rates"],
-            "last_updated": _cache["last_updated"],
-        })
+        return jsonify({"rates": _cache["rates"], "last_updated": _cache["last_updated"]})
 
 
 @app.route("/api/news")
+@login_required
 def api_news():
+    _ensure_news()
     with _lock:
-        return jsonify({
-            "news": _cache["news"],
-            "ubl_mentions": _cache["ubl_mentions"],
-            "news_last_updated": _cache["news_last_updated"],
-        })
+        return jsonify({"news": _cache["news"], "ubl_mentions": _cache["ubl_mentions"], "news_last_updated": _cache["news_last_updated"]})
 
 
 def _traffic(value, thresholds):
