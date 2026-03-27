@@ -630,6 +630,7 @@ def dashboard():
         health=health,
         news=news,
         ubl_mentions=ubl_mentions,
+        us_10y_value=rates.get("DGS10", {}).get("value"),
         bund_btp_spread=bund_btp_spread,
         last_updated=last_updated,
         news_last_updated=news_last_updated,

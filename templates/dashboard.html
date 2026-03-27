@@ -465,8 +465,16 @@
             .two-col { grid-template-columns: 1fr; gap: 1rem; }
             .quick-links { grid-template-columns: 1fr; }
             .section-title { font-size: 0.68rem; margin: 1.25rem 0 0.75rem; }
-            .expand-header { margin: 1rem 0 0.5rem; padding: 0.55rem 0.85rem; }
-            .expand-header .eh-label { font-size: 0.68rem; }
+            .expand-header {
+                margin: 0.75rem 0 0;
+                padding: 0.7rem 0.85rem;
+                border: 1px solid var(--border);
+                border-bottom: 2px solid var(--accent-cyan);
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            }
+            .expand-header .eh-label { font-size: 0.7rem; }
+            .expand-body { padding-bottom: 0.5rem; }
+            .expand-body.collapsed { padding-bottom: 0; }
         }
 
         @media (max-width: 420px) {
@@ -743,17 +751,13 @@
                 </tr>
             </thead>
             <tbody>
-                {% set us_10y_val = None %}
-                {% for item in grouped.global_bonds_10y %}
-                    {% if item.id == 'DGS10' %}{% set us_10y_val = item.value %}{% endif %}
-                {% endfor %}
                 {% for item in grouped.global_bonds_10y %}
                 <tr style="cursor:pointer;" onclick="openHistory('{{ item.id }}', '{{ item.label }}')">
                     <td style="font-weight:600;">{{ item.label }}</td>
                     <td class="rate-value">{% if item.value is not none %}{{ "%.2f"|format(item.value) }}{% else %}N/A{% endif %}</td>
                     <td>
-                        {% if item.value is not none and us_10y_val is not none and item.id != 'DGS10' %}
-                            {% set spread_bps = ((item.value - us_10y_val) * 100) | round(0) | int %}
+                        {% if item.value is not none and us_10y_value is not none and item.id != 'DGS10' %}
+                            {% set spread_bps = ((item.value - us_10y_value) * 100) | round(0) | int %}
                             <span style="color:{% if spread_bps > 0 %}var(--red){% elif spread_bps < 0 %}var(--green){% else %}var(--text-muted){% endif %}">
                                 {% if spread_bps > 0 %}+{% endif %}{{ spread_bps }} bps
                             </span>
@@ -860,30 +864,12 @@
 
     <!-- News sub-tabs -->
     <div class="news-subtabs">
-        <div class="news-subtab active" data-newstab="global" onclick="switchNewsTab('global')">Global Markets</div>
-        <div class="news-subtab" data-newstab="uk" onclick="switchNewsTab('uk')">UK &amp; Europe</div>
-    </div>
-
-    <!-- Global Markets Panel -->
-    <div class="news-panel active" id="newspanel-global">
-        <div class="news-feed">
-            {% if news.get('global_markets') %}
-                {% for item in news.global_markets[:15] %}
-                <div class="news-item">
-                    <div class="news-source">{{ item.icon }} {{ item.source }}</div>
-                    <div class="news-title"><a href="{{ item.link }}" target="_blank">{{ item.title }}</a></div>
-                    {% if item.summary %}<div class="news-summary">{{ item.summary }}</div>{% endif %}
-                    {% if item.date %}<div class="news-date">{{ item.date }}</div>{% endif %}
-                </div>
-                {% endfor %}
-            {% else %}
-                <div class="empty-state">Loading global market news...</div>
-            {% endif %}
-        </div>
+        <div class="news-subtab active" data-newstab="uk" onclick="switchNewsTab('uk')">UK &amp; Europe</div>
+        <div class="news-subtab" data-newstab="global" onclick="switchNewsTab('global')">Global Markets</div>
     </div>
 
     <!-- UK & European Panel -->
-    <div class="news-panel" id="newspanel-uk">
+    <div class="news-panel active" id="newspanel-uk">
         <div class="news-feed">
             {% if news.get('uk_finance') %}
                 {% for item in news.uk_finance[:15] %}
@@ -896,6 +882,24 @@
                 {% endfor %}
             {% else %}
                 <div class="empty-state">Loading UK finance news...</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Global Markets Panel -->
+    <div class="news-panel" id="newspanel-global">
+        <div class="news-feed">
+            {% if news.get('global_markets') %}
+                {% for item in news.global_markets[:15] %}
+                <div class="news-item">
+                    <div class="news-source">{{ item.icon }} {{ item.source }}</div>
+                    <div class="news-title"><a href="{{ item.link }}" target="_blank">{{ item.title }}</a></div>
+                    {% if item.summary %}<div class="news-summary">{{ item.summary }}</div>{% endif %}
+                    {% if item.date %}<div class="news-date">{{ item.date }}</div>{% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">Loading global market news...</div>
             {% endif %}
         </div>
     </div>
