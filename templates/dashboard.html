@@ -433,39 +433,45 @@
 <!-- ================================================================== -->
 <div class="tab-content active" id="tab-rates">
 
-    <!-- Central Bank Policy Rates -->
-    <div class="section-title">Central Bank & Interbank Rates
+    <!-- Central Bank Policy Rates — Multi-source cards -->
+    <div class="section-title">Central Bank & Policy Rates
         <span style="font-size:0.6rem; text-transform:none; letter-spacing:normal; color:var(--text-muted); font-weight:400;">
-            &nbsp;— Sources: FRED (daily), ECB SDW (live), Manual overrides where noted
+            &nbsp;— Multiple sources per bank to ensure accuracy
         </span>
     </div>
-    <div class="card-grid">
-        {% for item in grouped.central_banks %}
-        <div class="card{% if 'Bank of England' in item.label %} accent-cyan{% elif item.get('freshness') == 'stale' %} accent-red{% endif %}" onclick="openHistory('{{ item.id }}', '{{ item.label }}')">
-            <div class="label">{{ item.label }}</div>
-            {% if item.value is not none %}
-                <div class="value">
-                    {{ "%.2f"|format(item.value) }}%
-                    {% if item.direction == 'up' %}<span class="arrow up">&#9650;</span>
-                    {% elif item.direction == 'down' %}<span class="arrow down">&#9660;</span>
-                    {% elif item.direction == 'flat' %}<span class="arrow flat">&#9644;</span>{% endif %}
+    <div class="card-grid card-grid-wide">
+        {% for card in cb_cards %}
+        <div class="card" onclick="openHistory('{{ card.history_id }}', '{{ card.bank }}')">
+            <div class="label">{{ card.flag }} {{ card.bank }}</div>
+
+            {% for rate in card.rates %}
+            <div style="{% if not loop.first %}margin-top:0.6rem; padding-top:0.6rem; border-top:1px solid rgba(42,53,80,0.5);{% endif %}">
+                <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                    <span style="font-size:0.68rem; color:var(--text-secondary);">{{ rate.label }}</span>
+                    {% if rate.freshness == 'fresh' %}<span class="freshness-badge fresh">Live</span>
+                    {% elif rate.freshness == 'aging' %}<span class="freshness-badge aging">Monthly</span>
+                    {% elif rate.freshness == 'stale' %}<span class="freshness-badge stale">Stale</span>{% endif %}
                 </div>
-            {% else %}
-                <div class="value na">N/A</div>
-            {% endif %}
-            <div class="date">
-                Updated: {{ item.date or '—' }}
-                {% if item.get('freshness') == 'fresh' %}<span class="freshness-badge fresh">Live</span>
-                {% elif item.get('freshness') == 'aging' %}<span class="freshness-badge aging">Aging</span>
-                {% elif item.get('freshness') == 'stale' %}<span class="freshness-badge stale">Stale</span>{% endif %}
+                {% if rate.value is not none %}
+                    <div style="font-size:1.35rem; font-weight:700; letter-spacing:-0.02em; margin-top:0.15rem;">
+                        {{ "%.2f"|format(rate.value) }}%
+                        {% if rate.direction == 'up' %}<span class="arrow up">&#9650;</span>
+                        {% elif rate.direction == 'down' %}<span class="arrow down">&#9660;</span>
+                        {% elif rate.direction == 'flat' %}<span class="arrow flat">&#9644;</span>{% endif %}
+                    </div>
+                {% else %}
+                    <div style="font-size:1.1rem; color:var(--text-muted);">N/A</div>
+                {% endif %}
+                <div style="font-size:0.58rem; color:var(--text-muted);">{{ rate.date or '—' }} &nbsp;|&nbsp; {{ rate.source }}</div>
             </div>
-            {% if item.get('official_rate') is not none %}
-            <div class="official-rate">
-                Official policy rate: <strong>{{ "%.2f"|format(item.official_rate) }}%</strong>
-                ({{ item.official_date }}, {{ item.official_source }})
+            {% endfor %}
+
+            {% if card.note %}
+            <div class="official-rate" style="margin-top:0.6rem;">
+                {{ card.note }}
             </div>
             {% endif %}
-            {% if item.get('source') %}<div class="source-tag">Source: {{ item.source }}</div>{% endif %}
+
             <div class="click-hint">Click for 3, 6, 12 month history</div>
         </div>
         {% endfor %}

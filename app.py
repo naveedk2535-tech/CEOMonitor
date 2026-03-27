@@ -38,15 +38,18 @@ AUTH_PASSWORD = "admin1"
 # FRED series definitions
 # ---------------------------------------------------------------------------
 SERIES = {
-    "central_banks": {
-        "DFEDTARU":          "Fed Funds (Target Upper)",
-        "IUDSOIA":           "Bank of England (SONIA)",
-        "ECB_DFR":           "ECB Deposit Rate",
-        "IR3TIB01JPM156N":   "Japan Interbank Rate",
-        "IR3TIB01CHM156N":   "Swiss Interbank Rate",
-        "IR3TIB01AUM156N":   "Australia Interbank Rate",
+    # central_banks is now rendered via CENTRAL_BANK_CARDS (multi-rate per bank)
+    # These FRED series are still fetched individually for the cache
+    "central_banks_fred": {
+        "DFEDTARU":          "Fed Target Upper",
+        "DFEDTARL":          "Fed Target Lower",
+        "IUDSOIA":           "BoE SONIA",
+        "ECBMRRFR":          "ECB Main Refi (FRED)",
+        "IR3TIB01JPM156N":   "Japan 3M Interbank",
+        "IR3TIB01CHM156N":   "Swiss 3M Interbank",
+        "IR3TIB01AUM156N":   "Australia 3M Interbank",
         "IRSTCI01CAM156N":   "Bank of Canada Rate",
-        "IR3TIB01CNM156N":   "China Interbank Rate",
+        "IR3TIB01CNM156N":   "China 3M Interbank",
     },
     "us_treasuries": {
         "DGS1MO":  "1 Month",
@@ -100,9 +103,91 @@ SERIES = {
     },
 }
 
+# Central bank cards: each bank shows multiple rates from multiple sources
+CENTRAL_BANK_CARDS = [
+    {
+        "bank": "Federal Reserve (US)",
+        "flag": "🇺🇸",
+        "rates": [
+            {"id": "DFEDTARU", "label": "Target Upper Bound", "source": "FRED (daily)"},
+            {"id": "DFEDTARL", "label": "Target Lower Bound", "source": "FRED (daily)"},
+        ],
+        "history_id": "DFEDTARU",
+    },
+    {
+        "bank": "Bank of England",
+        "flag": "🇬🇧",
+        "rates": [
+            {"id": "IUDSOIA", "label": "SONIA (Overnight)", "source": "FRED (daily)"},
+        ],
+        "note": "BoE Base Rate is closely tracked by SONIA. Check bankofengland.co.uk for official rate.",
+        "history_id": "IUDSOIA",
+    },
+    {
+        "bank": "European Central Bank",
+        "flag": "🇪🇺",
+        "rates": [
+            {"id": "ECB_DFR", "label": "Deposit Facility Rate", "source": "ECB SDW (live)"},
+            {"id": "ECB_MRR", "label": "Main Refinancing Rate", "source": "ECB SDW (live)"},
+            {"id": "ECB_MLF", "label": "Marginal Lending Rate", "source": "ECB SDW (live)"},
+        ],
+        "history_id": "ECBDFR",
+    },
+    {
+        "bank": "Bank of Japan",
+        "flag": "🇯🇵",
+        "rates": [
+            {"id": "IR3TIB01JPM156N", "label": "3-Month Interbank", "source": "FRED (monthly)"},
+        ],
+        "note": "BoJ Policy Rate = 0.50% (raised Jan 24, 2025).",
+        "history_id": "IR3TIB01JPM156N",
+    },
+    {
+        "bank": "Swiss National Bank",
+        "flag": "🇨🇭",
+        "rates": [
+            {"id": "IR3TIB01CHM156N", "label": "3-Month Interbank", "source": "FRED (monthly)"},
+        ],
+        "note": "SNB Policy Rate = 0.25% (cut Mar 20, 2025).",
+        "history_id": "IR3TIB01CHM156N",
+    },
+    {
+        "bank": "Reserve Bank of Australia",
+        "flag": "🇦🇺",
+        "rates": [
+            {"id": "IR3TIB01AUM156N", "label": "3-Month Interbank", "source": "FRED (monthly)"},
+        ],
+        "note": "RBA Cash Rate = 4.10% (cut Feb 18, 2025).",
+        "history_id": "IR3TIB01AUM156N",
+    },
+    {
+        "bank": "Bank of Canada",
+        "flag": "🇨🇦",
+        "rates": [
+            {"id": "IRSTCI01CAM156N", "label": "Short-Term Rate", "source": "FRED (monthly)"},
+        ],
+        "note": "BoC Policy Rate = 2.75% (cut Mar 12, 2025).",
+        "history_id": "IRSTCI01CAM156N",
+    },
+    {
+        "bank": "People's Bank of China",
+        "flag": "🇨🇳",
+        "rates": [
+            {"id": "IR3TIB01CNM156N", "label": "3-Month Interbank", "source": "FRED (monthly)"},
+        ],
+        "note": "PBoC 1Y LPR = 3.10%, 7-day reverse repo = 1.50%.",
+        "history_id": "IR3TIB01CNM156N",
+    },
+]
+
 ALL_SERIES: dict[str, str] = {}
 for group in SERIES.values():
     ALL_SERIES.update(group)
+
+# Add ECB live series IDs to ALL_SERIES for label lookups
+ALL_SERIES["ECB_DFR"] = "ECB Deposit Facility Rate"
+ALL_SERIES["ECB_MRR"] = "ECB Main Refinancing Rate"
+ALL_SERIES["ECB_MLF"] = "ECB Marginal Lending Rate"
 
 # ---------------------------------------------------------------------------
 # RSS News Feed definitions
@@ -314,15 +399,21 @@ def _ensure_rates():
         return
     logger.info("Refreshing rate data…")
     rates = {}
+    # Map ECB live IDs to their ECB SDW rate codes and FRED fallbacks
+    ecb_live_map = {
+        "ECB_DFR": ("DFR", "ECBDFR"),
+        "ECB_MRR": ("MRR_FR", "ECBMRRFR"),
+        "ECB_MLF": ("MLFR", "ECBMLFR"),
+    }
+
     for series_id, label in ALL_SERIES.items():
-        if series_id == "ECB_DFR":
-            # Fetch live from ECB Statistical Data Warehouse
-            data = _fetch_ecb_rate("DFR")
+        if series_id in ecb_live_map:
+            ecb_code, fred_fallback = ecb_live_map[series_id]
+            data = _fetch_ecb_rate(ecb_code)
             if data["value"] is None:
-                # Fallback to FRED ECBDFR
-                data = _fetch_fred_series("ECBDFR")
+                data = _fetch_fred_series(fred_fallback)
+                data["source"] = "FRED (fallback)"
             data["label"] = label
-            data["source"] = data.get("source", "FRED")
         else:
             data = _fetch_fred_series(series_id)
             data["label"] = label
@@ -429,11 +520,36 @@ def dashboard():
 
     grouped: dict[str, list[dict]] = {}
     for group_key, series_map in SERIES.items():
+        if group_key == "central_banks_fred":
+            continue  # Rendered via cb_cards instead
         items = []
         for sid, label in series_map.items():
             entry = rates.get(sid, {"value": None, "date": None, "direction": None})
             items.append({"id": sid, "label": label, **entry})
         grouped[group_key] = items
+
+    # Build central bank multi-rate cards
+    cb_cards = []
+    for card_def in CENTRAL_BANK_CARDS:
+        card = {
+            "bank": card_def["bank"],
+            "flag": card_def["flag"],
+            "note": card_def.get("note"),
+            "history_id": card_def["history_id"],
+            "rates": [],
+        }
+        for rate_def in card_def["rates"]:
+            r = rates.get(rate_def["id"], {})
+            card["rates"].append({
+                "id": rate_def["id"],
+                "label": rate_def["label"],
+                "value": r.get("value"),
+                "date": r.get("date"),
+                "direction": r.get("direction"),
+                "freshness": r.get("freshness", "stale"),
+                "source": rate_def["source"],
+            })
+        cb_cards.append(card)
 
     treasury_order = list(SERIES["us_treasuries"].keys())
     yc_labels = [SERIES["us_treasuries"][s] for s in treasury_order]
@@ -466,6 +582,7 @@ def dashboard():
     return render_template(
         "dashboard.html",
         grouped=grouped,
+        cb_cards=cb_cards,
         yc_labels=yc_labels,
         yc_values=yc_values,
         health=health,
@@ -505,8 +622,9 @@ def api_history(series_id):
         months = 12
 
     label = ALL_SERIES.get(series_id, series_id)
-    # ECB_DFR is not a real FRED series — use ECBDFR as fallback for history
-    fetch_id = "ECBDFR" if series_id == "ECB_DFR" else series_id
+    # ECB live IDs are not real FRED series — map to FRED equivalents for history
+    ecb_history_map = {"ECB_DFR": "ECBDFR", "ECB_MRR": "ECBMRRFR", "ECB_MLF": "ECBMLFR"}
+    fetch_id = ecb_history_map.get(series_id, series_id)
     data = _fetch_fred_history(fetch_id, months)
 
     return jsonify({
