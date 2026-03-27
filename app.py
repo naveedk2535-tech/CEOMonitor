@@ -1,8 +1,7 @@
 import os
 import logging
-import hashlib
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from threading import Lock
 from html import unescape
 from functools import wraps
@@ -15,7 +14,6 @@ from flask import Flask, render_template, jsonify, request, redirect, url_for, s
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-# Try dotenv, fall back to os.environ
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -25,7 +23,7 @@ except ImportError:
 FRED_API_KEY = os.getenv("FRED_API_KEY")
 
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "ceomonitor-ubluk-2026-secret-key")
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "banking-exec-dashboard-2026-secret-key")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -45,6 +43,10 @@ SERIES = {
         "IUDSOIA":           "Bank of England (SONIA Proxy)",
         "ECBMLFR":           "ECB Main Refinancing Rate",
         "INTDSRJPM193N":     "Bank of Japan Rate",
+        "IRSTCI01CHM156N":   "Swiss National Bank Rate",
+        "IRSTCI01AUM156N":   "RBA Australia Rate",
+        "INTDSRCAM193N":     "Bank of Canada Rate",
+        "INTDSRCNM193N":     "PBoC China Rate",
     },
     "us_treasuries": {
         "DGS1MO":  "1 Month",
@@ -58,9 +60,19 @@ SERIES = {
         "DGS20":   "20 Year",
         "DGS30":   "30 Year",
     },
-    "bonds": {
-        "IRLTLT01GBM156N": "UK Long-Term Gilt",
-        "MORTGAGE30US":    "US 30-Year Mortgage",
+    "global_bonds_10y": {
+        "DGS10":             "US 10Y",
+        "IRLTLT01GBM156N":   "UK 10Y",
+        "IRLTLT01DEM156N":   "Germany 10Y",
+        "IRLTLT01FRM156N":   "France 10Y",
+        "IRLTLT01JPM156N":   "Japan 10Y",
+        "IRLTLT01CAM156N":   "Canada 10Y",
+        "IRLTLT01AUM156N":   "Australia 10Y",
+        "IRLTLT01ITM156N":   "Italy 10Y",
+        "IRLTLT01ESM156N":   "Spain 10Y",
+        "IRLTLT01CHM156N":   "Switzerland 10Y",
+        "IRLTLT01KRM156N":   "South Korea 10Y",
+        "IRLTLT01NZM156N":   "New Zealand 10Y",
     },
     "spreads": {
         "T10Y2Y":          "2s10s Spread",
@@ -69,6 +81,7 @@ SERIES = {
         "BAMLH0A0HYM2":    "HY Corporate Spread",
         "TEDRATE":         "TED Spread",
         "DPRIME":          "US Prime Rate",
+        "MORTGAGE30US":    "US 30-Year Mortgage",
     },
     "uk_rates": {
         "IR3TIB01GBM156N": "UK 3-Month Interbank",
@@ -109,19 +122,12 @@ NEWS_FEEDS = {
     ],
 }
 
-UBL_SEARCH_QUERIES = [
-    "United Bank Limited UK",
-    "UBL UK",
-    "ubluk.com",
-]
-
 # ---------------------------------------------------------------------------
 # Time-based cache (no APScheduler needed)
 # ---------------------------------------------------------------------------
 _cache: dict = {
     "rates": {},
     "news": {},
-    "ubl_mentions": [],
     "last_updated": None,
     "news_last_updated": None,
     "rates_fetched_at": 0,
@@ -177,6 +183,34 @@ def _fetch_fred_series(series_id: str) -> dict:
         return {"value": None, "date": None, "direction": None}
 
 
+def _fetch_fred_history(series_id: str, months: int = 12) -> list[dict]:
+    """Fetch FRED observations for a series over the past N months."""
+    url = "https://api.stlouisfed.org/fred/series/observations"
+    start_date = (datetime.now(timezone.utc) - timedelta(days=months * 30)).strftime("%Y-%m-%d")
+    params = {
+        "series_id": series_id,
+        "api_key": FRED_API_KEY,
+        "file_type": "json",
+        "sort_order": "asc",
+        "observation_start": start_date,
+    }
+    try:
+        resp = requests.get(url, params=params, timeout=15)
+        resp.raise_for_status()
+        observations = resp.json().get("observations", [])
+        result = []
+        for obs in observations:
+            try:
+                val = float(obs["value"])
+            except (ValueError, TypeError):
+                continue
+            result.append({"date": obs["date"], "value": val})
+        return result
+    except Exception as exc:
+        logger.warning("Failed to fetch history for %s: %s", series_id, exc)
+        return []
+
+
 def _strip_html(text: str) -> str:
     clean = re.sub(r"<[^>]+>", "", text)
     return unescape(clean).strip()
@@ -185,7 +219,7 @@ def _strip_html(text: str) -> str:
 def _parse_rss(url: str, max_items: int = 8) -> list[dict]:
     try:
         headers = {
-            "User-Agent": "CEOMonitor/1.0 (Financial Dashboard)",
+            "User-Agent": "BankingDashboard/1.0 (Financial Dashboard)",
             "Accept": "application/rss+xml, application/xml, text/xml",
         }
         resp = requests.get(url, headers=headers, timeout=15)
@@ -220,16 +254,6 @@ def _parse_rss(url: str, max_items: int = 8) -> list[dict]:
         return items
     except Exception as exc:
         logger.warning("Failed to fetch RSS %s: %s", url, exc)
-        return []
-
-
-def _search_google_news(query: str, max_items: int = 5) -> list[dict]:
-    try:
-        encoded = requests.utils.quote(query)
-        url = f"https://news.google.com/rss/search?q={encoded}&hl=en-GB&gl=GB&ceid=GB:en"
-        return _parse_rss(url, max_items)
-    except Exception as exc:
-        logger.warning("Failed Google News search for %s: %s", query, exc)
         return []
 
 
@@ -268,23 +292,11 @@ def _ensure_news():
             category_items.extend(articles)
         news[category] = category_items
 
-    ubl_mentions = []
-    seen_titles = set()
-    for query in UBL_SEARCH_QUERIES:
-        results = _search_google_news(query)
-        for item in results:
-            title_hash = hashlib.md5(item["title"].encode()).hexdigest()
-            if title_hash not in seen_titles:
-                seen_titles.add(title_hash)
-                item["query"] = query
-                ubl_mentions.append(item)
-
     with _lock:
         _cache["news"] = news
-        _cache["ubl_mentions"] = ubl_mentions
         _cache["news_fetched_at"] = now
         _cache["news_last_updated"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-    logger.info("News refresh complete — %d UBL mentions found.", len(ubl_mentions))
+    logger.info("News refresh complete.")
 
 
 # ---------------------------------------------------------------------------
@@ -332,7 +344,6 @@ def dashboard():
     with _lock:
         rates = dict(_cache["rates"])
         news = dict(_cache["news"])
-        ubl_mentions = list(_cache["ubl_mentions"])
         last_updated = _cache["last_updated"]
         news_last_updated = _cache["news_last_updated"]
 
@@ -364,6 +375,14 @@ def dashboard():
         "ted_spread": ted_spread,
     }
 
+    # Compute Bund-BTP spread (Italy 10Y minus Germany 10Y)
+    italy_10y = rates.get("IRLTLT01ITM156N", {}).get("value")
+    germany_10y = rates.get("IRLTLT01DEM156N", {}).get("value")
+    if italy_10y is not None and germany_10y is not None:
+        bund_btp_spread = round(italy_10y - germany_10y, 4)
+    else:
+        bund_btp_spread = None
+
     return render_template(
         "dashboard.html",
         grouped=grouped,
@@ -371,7 +390,7 @@ def dashboard():
         yc_values=yc_values,
         health=health,
         news=news,
-        ubl_mentions=ubl_mentions,
+        bund_btp_spread=bund_btp_spread,
         last_updated=last_updated,
         news_last_updated=news_last_updated,
     )
@@ -390,7 +409,30 @@ def api_rates():
 def api_news():
     _ensure_news()
     with _lock:
-        return jsonify({"news": _cache["news"], "ubl_mentions": _cache["ubl_mentions"], "news_last_updated": _cache["news_last_updated"]})
+        return jsonify({"news": _cache["news"], "news_last_updated": _cache["news_last_updated"]})
+
+
+@app.route("/api/history/<series_id>")
+@login_required
+def api_history(series_id):
+    """Return historical FRED observations for a series over N months."""
+    allowed_months = {3, 6, 12}
+    try:
+        months = int(request.args.get("months", 12))
+    except (ValueError, TypeError):
+        months = 12
+    if months not in allowed_months:
+        months = 12
+
+    label = ALL_SERIES.get(series_id, series_id)
+    data = _fetch_fred_history(series_id, months)
+
+    return jsonify({
+        "series_id": series_id,
+        "label": label,
+        "months": months,
+        "data": data,
+    })
 
 
 def _traffic(value, thresholds):

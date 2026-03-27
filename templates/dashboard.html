@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="refresh" content="300">
-    <title>CEOMonitor — UBL UK Executive Dashboard</title>
+    <title>CEOMonitor — Banking Executive Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -44,54 +44,45 @@
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             border-bottom: 1px solid var(--border);
             padding: 1.25rem 2rem;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: space-between;
-            gap: 0.75rem;
+            display: flex; flex-wrap: wrap;
+            align-items: center; justify-content: space-between; gap: 0.75rem;
         }
         .header-left { display: flex; flex-direction: column; gap: 0.2rem; }
         .header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
         .header h1 span { color: var(--accent-cyan); }
-        .header .subtitle { font-size: 0.85rem; color: var(--text-secondary); font-weight: 400; }
-        .header .subtitle a { color: var(--accent-cyan); text-decoration: none; }
-        .header .subtitle a:hover { text-decoration: underline; }
-        .header-right { text-align: right; font-size: 0.8rem; color: var(--text-secondary); }
-        .header-right .live-dot {
+        .header .subtitle { font-size: 0.85rem; color: var(--text-secondary); }
+        .header-right { display: flex; align-items: center; gap: 1.25rem; }
+        .header-clock { text-align: right; font-size: 0.8rem; color: var(--text-secondary); }
+        .header-clock .live-dot {
             display: inline-block; width: 8px; height: 8px;
             background: var(--green); border-radius: 50%;
             margin-right: 6px; animation: pulse 2s infinite;
         }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .logout-btn {
+            padding: 0.45rem 1rem; background: rgba(239,68,68,0.12);
+            border: 1px solid rgba(239,68,68,0.3); border-radius: 8px;
+            color: var(--red); font-size: 0.75rem; font-weight: 600;
+            text-decoration: none; text-transform: uppercase; letter-spacing: 0.05em;
+            transition: all 0.2s;
+        }
+        .logout-btn:hover { background: rgba(239,68,68,0.25); border-color: var(--red); }
 
         /* NAV TABS */
         .nav-tabs {
             background: var(--bg-secondary);
             border-bottom: 1px solid var(--border);
-            display: flex;
-            overflow-x: auto;
-            padding: 0 2rem;
-            gap: 0;
+            display: flex; overflow-x: auto; padding: 0 2rem;
         }
         .nav-tab {
-            padding: 0.75rem 1.25rem;
-            font-size: 0.78rem;
-            font-weight: 500;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            white-space: nowrap;
-            transition: color 0.2s, border-color 0.2s;
+            padding: 0.75rem 1.25rem; font-size: 0.78rem; font-weight: 500;
+            color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em;
+            cursor: pointer; border-bottom: 2px solid transparent;
+            white-space: nowrap; transition: color 0.2s, border-color 0.2s;
         }
         .nav-tab:hover { color: var(--text-primary); }
-        .nav-tab.active {
-            color: var(--accent-cyan);
-            border-bottom-color: var(--accent-cyan);
-        }
+        .nav-tab.active { color: var(--accent-cyan); border-bottom-color: var(--accent-cyan); }
 
-        /* TAB CONTENT */
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
@@ -102,8 +93,7 @@
             font-size: 0.75rem; font-weight: 600;
             text-transform: uppercase; letter-spacing: 0.1em;
             color: var(--accent-cyan);
-            margin: 2rem 0 1rem;
-            padding-bottom: 0.5rem;
+            margin: 2rem 0 1rem; padding-bottom: 0.5rem;
             border-bottom: 1px solid var(--border);
         }
         .section-title:first-child { margin-top: 0; }
@@ -111,20 +101,18 @@
         /* CARDS */
         .card-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
             gap: 1rem;
         }
-        .card-grid-wide { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+        .card-grid-wide { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
         .card-grid-3 { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
 
         .card {
             background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.25rem;
+            border-radius: 12px; padding: 1.15rem;
             transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
-            position: relative;
-            overflow: hidden;
+            position: relative; overflow: hidden; cursor: pointer;
         }
         .card:hover {
             background: var(--bg-card-hover);
@@ -132,8 +120,7 @@
             box-shadow: 0 4px 24px rgba(0,0,0,0.3);
         }
         .card::before {
-            content: '';
-            position: absolute;
+            content: ''; position: absolute;
             top: 0; left: 0; right: 0; height: 3px;
             background: var(--accent-blue); opacity: 0.6;
             border-radius: 12px 12px 0 0;
@@ -145,19 +132,24 @@
         .card.accent-red::before { background: var(--red); }
 
         .card .label {
-            font-size: 0.75rem; font-weight: 500;
+            font-size: 0.72rem; font-weight: 500;
             color: var(--text-secondary);
             text-transform: uppercase; letter-spacing: 0.05em;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.6rem;
         }
         .card .value {
-            font-size: 1.75rem; font-weight: 700;
+            font-size: 1.65rem; font-weight: 700;
             letter-spacing: -0.02em; line-height: 1.1;
         }
-        .card .value.na { color: var(--text-muted); font-size: 1.2rem; }
+        .card .value.na { color: var(--text-muted); font-size: 1.1rem; }
         .card .date {
-            font-size: 0.7rem; color: var(--text-muted); margin-top: 0.5rem;
+            font-size: 0.65rem; color: var(--text-muted); margin-top: 0.4rem;
         }
+        .card .click-hint {
+            font-size: 0.6rem; color: var(--accent-cyan); margin-top: 0.5rem;
+            opacity: 0; transition: opacity 0.2s;
+        }
+        .card:hover .click-hint { opacity: 1; }
 
         .arrow { font-size: 0.85rem; margin-left: 6px; font-weight: 600; }
         .arrow.up   { color: var(--red); }
@@ -165,223 +157,224 @@
         .arrow.flat { color: var(--text-muted); }
 
         .inversion-flag {
-            display: inline-block;
-            background: rgba(239, 68, 68, 0.15);
-            color: var(--red);
-            font-size: 0.65rem; font-weight: 600;
+            display: inline-block; background: rgba(239,68,68,0.15);
+            color: var(--red); font-size: 0.65rem; font-weight: 600;
             text-transform: uppercase; letter-spacing: 0.06em;
-            padding: 0.2rem 0.5rem; border-radius: 4px;
-            margin-top: 0.5rem;
+            padding: 0.2rem 0.5rem; border-radius: 4px; margin-top: 0.5rem;
         }
+
+        /* COLLAPSIBLE TABLE */
+        .collapsible-header {
+            display: flex; align-items: center; justify-content: space-between;
+            cursor: pointer; padding: 0.75rem 1rem;
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 12px; transition: all 0.2s;
+        }
+        .collapsible-header:hover { background: var(--bg-card-hover); }
+        .collapsible-header .ch-label {
+            font-size: 0.78rem; font-weight: 600; color: var(--text-primary);
+        }
+        .collapsible-header .ch-toggle {
+            font-size: 0.7rem; color: var(--accent-cyan);
+            display: flex; align-items: center; gap: 0.3rem;
+        }
+        .collapsible-header .ch-arrow {
+            transition: transform 0.3s; display: inline-block;
+        }
+        .collapsible-header.open .ch-arrow { transform: rotate(180deg); }
+        .collapsible-body {
+            max-height: 0; overflow: hidden;
+            transition: max-height 0.4s ease;
+        }
+        .collapsible-body.open { max-height: 800px; }
 
         /* TABLE */
         .table-wrap {
-            overflow-x: auto; border-radius: 12px;
-            border: 1px solid var(--border);
+            overflow-x: auto; border-radius: 0 0 12px 12px;
+            border: 1px solid var(--border); border-top: none;
             background: var(--bg-card);
         }
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
         th {
-            background: var(--bg-secondary);
-            color: var(--text-secondary); font-weight: 600;
-            text-transform: uppercase; font-size: 0.7rem;
+            background: var(--bg-secondary); color: var(--text-secondary);
+            font-weight: 600; text-transform: uppercase; font-size: 0.7rem;
             letter-spacing: 0.08em; padding: 0.75rem 1rem;
             text-align: left; border-bottom: 1px solid var(--border);
         }
         td {
-            padding: 0.65rem 1rem;
-            border-bottom: 1px solid rgba(42, 53, 80, 0.5);
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid rgba(42,53,80,0.5);
         }
         tr:last-child td { border-bottom: none; }
-        tr:hover td { background: rgba(59, 130, 246, 0.04); }
+        tr:hover td { background: rgba(59,130,246,0.04); }
         td.rate-value {
             font-weight: 600; font-variant-numeric: tabular-nums; font-size: 0.95rem;
         }
 
         /* CHART */
         .chart-container {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.25rem;
-            margin-top: 1rem;
-            position: relative;
-            height: 320px;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 1.25rem;
+            margin-top: 1rem; position: relative; height: 320px;
         }
 
-        /* HEALTH INDICATORS */
+        /* HEALTH */
         .health-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 1rem;
         }
         .health-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.25rem;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 1.25rem;
             display: flex; align-items: center; gap: 1rem;
         }
         .health-card:hover { background: var(--bg-card-hover); }
         .traffic-light {
-            width: 48px; height: 48px;
-            border-radius: 50%; flex-shrink: 0;
+            width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
             display: flex; align-items: center; justify-content: center;
             font-weight: 700; font-size: 0.7rem; text-transform: uppercase;
-            box-shadow: 0 0 18px rgba(0,0,0,0.3);
         }
         .traffic-light.green  { background: var(--green);  color: #052e16; box-shadow: 0 0 18px rgba(34,197,94,0.35); }
         .traffic-light.yellow { background: var(--yellow); color: #422006; box-shadow: 0 0 18px rgba(234,179,8,0.35); }
         .traffic-light.red    { background: var(--red);    color: #450a0a; box-shadow: 0 0 18px rgba(239,68,68,0.35); }
         .traffic-light.grey   { background: #475569;       color: #1e293b; }
-
-        .health-info .health-label {
-            font-size: 0.8rem; font-weight: 600; color: var(--text-primary);
-            margin-bottom: 0.15rem;
-        }
-        .health-info .health-detail {
-            font-size: 0.72rem; color: var(--text-secondary);
-        }
+        .health-info .health-label { font-size: 0.8rem; font-weight: 600; margin-bottom: 0.15rem; }
+        .health-info .health-detail { font-size: 0.72rem; color: var(--text-secondary); }
 
         /* NEWS */
         .news-feed {
-            display: flex; flex-direction: column; gap: 0;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            overflow: hidden;
+            display: flex; flex-direction: column;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; overflow: hidden;
         }
         .news-item {
             padding: 1rem 1.25rem;
-            border-bottom: 1px solid rgba(42, 53, 80, 0.5);
+            border-bottom: 1px solid rgba(42,53,80,0.5);
             transition: background 0.15s;
         }
         .news-item:last-child { border-bottom: none; }
         .news-item:hover { background: var(--bg-card-hover); }
         .news-item .news-source {
-            font-size: 0.65rem; font-weight: 600;
-            text-transform: uppercase; letter-spacing: 0.06em;
-            color: var(--accent-cyan);
-            margin-bottom: 0.3rem;
+            font-size: 0.65rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.06em; color: var(--accent-cyan); margin-bottom: 0.3rem;
         }
-        .news-item .news-title {
-            font-size: 0.88rem; font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 0.25rem;
-            line-height: 1.35;
-        }
-        .news-item .news-title a {
-            color: var(--text-primary);
-            text-decoration: none;
-        }
-        .news-item .news-title a:hover {
-            color: var(--accent-cyan);
-        }
-        .news-item .news-summary {
-            font-size: 0.75rem; color: var(--text-secondary);
-            line-height: 1.45;
-        }
-        .news-item .news-date {
-            font-size: 0.65rem; color: var(--text-muted);
-            margin-top: 0.35rem;
+        .news-item .news-title { font-size: 0.88rem; font-weight: 600; margin-bottom: 0.25rem; line-height: 1.35; }
+        .news-item .news-title a { color: var(--text-primary); text-decoration: none; }
+        .news-item .news-title a:hover { color: var(--accent-cyan); }
+        .news-item .news-summary { font-size: 0.75rem; color: var(--text-secondary); line-height: 1.45; }
+        .news-item .news-date { font-size: 0.65rem; color: var(--text-muted); margin-top: 0.35rem; }
+
+        .empty-state {
+            text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.85rem;
         }
 
-        /* UBL MENTIONS */
-        .mention-badge {
-            display: inline-block;
-            background: rgba(139, 92, 246, 0.15);
-            color: var(--accent-purple);
-            font-size: 0.6rem; font-weight: 600;
-            padding: 0.15rem 0.5rem;
-            border-radius: 4px;
-            margin-left: 0.5rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+        .two-col {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;
         }
-        .ubl-mention-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-left: 3px solid var(--accent-purple);
-            border-radius: 8px;
-            padding: 1rem 1.25rem;
-            margin-bottom: 0.75rem;
-            transition: background 0.15s;
-        }
-        .ubl-mention-card:hover { background: var(--bg-card-hover); }
+        @media (max-width: 1024px) { .two-col { grid-template-columns: 1fr; } }
 
         /* QUICK LINKS */
         .quick-links {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-            gap: 0.75rem;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.75rem;
         }
         .quick-link {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 1rem;
-            text-decoration: none;
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            transition: all 0.2s;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 10px; padding: 1rem; text-decoration: none;
+            color: var(--text-primary); display: flex; align-items: center;
+            gap: 0.75rem; transition: all 0.2s;
         }
         .quick-link:hover {
-            background: var(--bg-card-hover);
-            border-color: var(--accent-cyan);
-            box-shadow: 0 2px 12px rgba(6, 182, 212, 0.15);
+            background: var(--bg-card-hover); border-color: var(--accent-cyan);
+            box-shadow: 0 2px 12px rgba(6,182,212,0.15);
         }
         .quick-link .ql-icon {
-            font-size: 1.5rem;
-            width: 40px; height: 40px;
+            font-size: 1.5rem; width: 40px; height: 40px;
             display: flex; align-items: center; justify-content: center;
-            background: rgba(6, 182, 212, 0.1);
-            border-radius: 8px;
-            flex-shrink: 0;
+            background: rgba(6,182,212,0.1); border-radius: 8px; flex-shrink: 0;
         }
-        .quick-link .ql-text .ql-name {
-            font-size: 0.82rem; font-weight: 600;
+        .quick-link .ql-text .ql-name { font-size: 0.82rem; font-weight: 600; }
+        .quick-link .ql-text .ql-desc { font-size: 0.68rem; color: var(--text-muted); }
+
+        /* MODAL */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.7); z-index: 1000;
+            align-items: center; justify-content: center;
+            backdrop-filter: blur(4px);
         }
-        .quick-link .ql-text .ql-desc {
-            font-size: 0.68rem; color: var(--text-muted);
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 16px; width: 90%; max-width: 750px;
+            max-height: 85vh; overflow-y: auto;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+        }
+        .modal-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border);
+        }
+        .modal-header h3 { font-size: 1.1rem; font-weight: 700; }
+        .modal-close {
+            width: 32px; height: 32px; border-radius: 8px;
+            background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2);
+            color: var(--red); font-size: 1.1rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+        }
+        .modal-close:hover { background: rgba(239,68,68,0.25); }
+        .modal-body { padding: 1.5rem; }
+        .modal-period-btns {
+            display: flex; gap: 0.5rem; margin-bottom: 1rem;
+        }
+        .modal-period-btn {
+            padding: 0.4rem 1rem; border-radius: 8px;
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            color: var(--text-secondary); font-size: 0.75rem; font-weight: 600;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .modal-period-btn:hover { border-color: var(--accent-cyan); color: var(--text-primary); }
+        .modal-period-btn.active {
+            background: rgba(6,182,212,0.15); border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+        .modal-chart-wrap { height: 320px; position: relative; }
+        .modal-loading {
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--text-muted); font-size: 0.85rem;
         }
 
-        /* TWO COLUMN LAYOUT */
-        .two-col {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
+        /* BUND-BTP HIGHLIGHT */
+        .spread-highlight {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-left: 3px solid var(--accent-purple);
+            border-radius: 8px; padding: 1rem 1.25rem;
+            display: flex; align-items: center; gap: 1rem;
+            margin-top: 1rem;
         }
-        @media (max-width: 1024px) {
-            .two-col { grid-template-columns: 1fr; }
+        .spread-highlight .sh-label {
+            font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;
+            color: var(--text-secondary); font-weight: 500;
         }
-
-        /* EMPTY STATE */
-        .empty-state {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-muted);
-            font-size: 0.85rem;
+        .spread-highlight .sh-value {
+            font-size: 1.5rem; font-weight: 700; color: var(--accent-purple);
         }
 
         /* FOOTER */
         .footer {
-            text-align: center;
-            padding: 2rem 1rem;
-            font-size: 0.72rem;
-            color: var(--text-muted);
-            border-top: 1px solid var(--border);
-            margin-top: 2rem;
+            text-align: center; padding: 2rem 1rem;
+            font-size: 0.72rem; color: var(--text-muted);
+            border-top: 1px solid var(--border); margin-top: 2rem;
         }
 
-        /* RESPONSIVE */
         @media (max-width: 768px) {
             .header { padding: 1rem; }
             .container { padding: 1rem; }
-            .card .value { font-size: 1.4rem; }
+            .card .value { font-size: 1.3rem; }
             .chart-container { height: 250px; }
             .nav-tabs { padding: 0 1rem; }
+            .modal { width: 95%; }
         }
     </style>
 </head>
@@ -391,23 +384,23 @@
 <header class="header">
     <div class="header-left">
         <h1><span>CEOMonitor</span> — Executive Dashboard</h1>
-        <div class="subtitle">
-            UBL UK &nbsp;|&nbsp; <a href="https://www.ubluk.com" target="_blank">www.ubluk.com</a>
-            &nbsp;|&nbsp; Prepared for CEO Minaz
-        </div>
+        <div class="subtitle">Banking & Financial Intelligence Platform</div>
     </div>
     <div class="header-right">
-        <div><span class="live-dot"></span>Live Data</div>
-        <div id="clock" style="font-size:1.1rem; font-weight:600; margin-top:4px;"></div>
+        <div class="header-clock">
+            <div><span class="live-dot"></span>Live Data</div>
+            <div id="clock" style="font-size:1.1rem; font-weight:600; margin-top:4px;"></div>
+        </div>
+        <a href="/logout" class="logout-btn">Logout</a>
     </div>
 </header>
 
-<!-- NAVIGATION TABS -->
+<!-- NAVIGATION -->
 <nav class="nav-tabs">
     <div class="nav-tab active" data-tab="rates">Rates & Markets</div>
+    <div class="nav-tab" data-tab="bonds">Global Bonds</div>
     <div class="nav-tab" data-tab="uk">UK Banking</div>
     <div class="nav-tab" data-tab="news">Financial News</div>
-    <div class="nav-tab" data-tab="ubl">UBL UK Monitor</div>
     <div class="nav-tab" data-tab="links">Quick Links</div>
 </nav>
 
@@ -422,20 +415,20 @@
     <div class="section-title">Central Bank Policy Rates</div>
     <div class="card-grid">
         {% for item in grouped.central_banks %}
-        <div class="card{% if item.id == 'INTDSRUKM193N' %} accent-cyan{% endif %}">
+        <div class="card{% if 'Bank of England' in item.label %} accent-cyan{% endif %}" onclick="openHistory('{{ item.id }}', '{{ item.label }}')">
             <div class="label">{{ item.label }}</div>
             {% if item.value is not none %}
                 <div class="value">
                     {{ "%.2f"|format(item.value) }}%
                     {% if item.direction == 'up' %}<span class="arrow up">&#9650;</span>
                     {% elif item.direction == 'down' %}<span class="arrow down">&#9660;</span>
-                    {% elif item.direction == 'flat' %}<span class="arrow flat">&#9644;</span>
-                    {% endif %}
+                    {% elif item.direction == 'flat' %}<span class="arrow flat">&#9644;</span>{% endif %}
                 </div>
             {% else %}
                 <div class="value na">N/A</div>
             {% endif %}
-            <div class="date">{{ item.date or '—' }}</div>
+            <div class="date">Updated: {{ item.date or '—' }}</div>
+            <div class="click-hint">Click for 3, 6, 12 month history</div>
         </div>
         {% endfor %}
     </div>
@@ -444,99 +437,76 @@
     <div class="section-title">Foreign Exchange</div>
     <div class="card-grid">
         {% for item in grouped.fx_rates %}
-        <div class="card accent-amber">
+        <div class="card accent-amber" onclick="openHistory('{{ item.id }}', '{{ item.label }}')">
             <div class="label">{{ item.label }}</div>
             {% if item.value is not none %}
                 <div class="value">
                     {{ "%.4f"|format(item.value) }}
                     {% if item.direction == 'up' %}<span class="arrow up">&#9650;</span>
                     {% elif item.direction == 'down' %}<span class="arrow down">&#9660;</span>
-                    {% elif item.direction == 'flat' %}<span class="arrow flat">&#9644;</span>
-                    {% endif %}
+                    {% elif item.direction == 'flat' %}<span class="arrow flat">&#9644;</span>{% endif %}
                 </div>
             {% else %}
                 <div class="value na">N/A</div>
             {% endif %}
-            <div class="date">{{ item.date or '—' }}</div>
+            <div class="date">Updated: {{ item.date or '—' }}</div>
+            <div class="click-hint">Click for 3, 6, 12 month history</div>
         </div>
         {% endfor %}
     </div>
 
-    <!-- US Treasury Yield Curve -->
+    <!-- US Treasury Yield Curve — COLLAPSIBLE TABLE -->
     <div class="section-title">US Treasury Yield Curve</div>
-    <div class="table-wrap">
-        <table>
-            <thead>
-                <tr>
-                    <th>Maturity</th>
-                    <th>Yield (%)</th>
-                    <th>As of</th>
-                    <th>Trend</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in grouped.us_treasuries %}
-                <tr>
-                    <td>{{ item.label }}</td>
-                    <td class="rate-value">
-                        {% if item.value is not none %}{{ "%.2f"|format(item.value) }}{% else %}N/A{% endif %}
-                    </td>
-                    <td style="color:var(--text-muted); font-size:0.78rem;">{{ item.date or '—' }}</td>
-                    <td>
-                        {% if item.direction == 'up' %}<span class="arrow up">&#9650;</span>
-                        {% elif item.direction == 'down' %}<span class="arrow down">&#9660;</span>
-                        {% elif item.direction == 'flat' %}<span class="arrow flat">&#9644;</span>
-                        {% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="collapsible-header" id="yc-toggle" onclick="toggleCollapsible('yc')">
+        <span class="ch-label">Yield Curve Data Table ({{ grouped.us_treasuries | length }} maturities)</span>
+        <span class="ch-toggle"><span class="ch-arrow" id="yc-arrow">&#9660;</span> Show table</span>
+    </div>
+    <div class="collapsible-body" id="yc-body">
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th>Maturity</th><th>Yield (%)</th><th>Updated</th><th>Trend</th></tr>
+                </thead>
+                <tbody>
+                    {% for item in grouped.us_treasuries %}
+                    <tr style="cursor:pointer;" onclick="openHistory('{{ item.id }}', 'UST {{ item.label }}')">
+                        <td>{{ item.label }}</td>
+                        <td class="rate-value">{% if item.value is not none %}{{ "%.2f"|format(item.value) }}{% else %}N/A{% endif %}</td>
+                        <td style="color:var(--text-muted); font-size:0.72rem;">{{ item.date or '—' }}</td>
+                        <td>
+                            {% if item.direction == 'up' %}<span class="arrow up">&#9650;</span>
+                            {% elif item.direction == 'down' %}<span class="arrow down">&#9660;</span>
+                            {% elif item.direction == 'flat' %}<span class="arrow flat">&#9644;</span>
+                            {% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
     <div class="chart-container">
         <canvas id="yieldCurveChart"></canvas>
-    </div>
-
-    <!-- UK & Global Bonds -->
-    <div class="section-title">UK &amp; Global Bonds</div>
-    <div class="card-grid">
-        {% for item in grouped.bonds %}
-        <div class="card">
-            <div class="label">{{ item.label }}</div>
-            {% if item.value is not none %}
-                <div class="value">
-                    {{ "%.2f"|format(item.value) }}%
-                    {% if item.direction == 'up' %}<span class="arrow up">&#9650;</span>
-                    {% elif item.direction == 'down' %}<span class="arrow down">&#9660;</span>
-                    {% elif item.direction == 'flat' %}<span class="arrow flat">&#9644;</span>
-                    {% endif %}
-                </div>
-            {% else %}
-                <div class="value na">N/A</div>
-            {% endif %}
-            <div class="date">{{ item.date or '—' }}</div>
-        </div>
-        {% endfor %}
     </div>
 
     <!-- Inflation -->
     <div class="section-title">Inflation Indicators</div>
     <div class="card-grid">
         {% for item in grouped.inflation %}
-        <div class="card accent-red">
+        <div class="card accent-red" onclick="openHistory('{{ item.id }}', '{{ item.label }}')">
             <div class="label">{{ item.label }}</div>
             {% if item.value is not none %}
                 <div class="value">
                     {{ "%.2f"|format(item.value) }}{% if item.id == 'T10YIE' %}%{% endif %}
                     {% if item.direction == 'up' %}<span class="arrow up">&#9650;</span>
                     {% elif item.direction == 'down' %}<span class="arrow down">&#9660;</span>
-                    {% elif item.direction == 'flat' %}<span class="arrow flat">&#9644;</span>
-                    {% endif %}
+                    {% elif item.direction == 'flat' %}<span class="arrow flat">&#9644;</span>{% endif %}
                 </div>
             {% else %}
                 <div class="value na">N/A</div>
             {% endif %}
-            <div class="date">{{ item.date or '—' }}</div>
+            <div class="date">Updated: {{ item.date or '—' }}</div>
+            <div class="click-hint">Click for 3, 6, 12 month history</div>
         </div>
         {% endfor %}
     </div>
@@ -545,15 +515,14 @@
     <div class="section-title">Spreads &amp; Money Markets</div>
     <div class="card-grid card-grid-wide">
         {% for item in grouped.spreads %}
-        <div class="card">
+        <div class="card" onclick="openHistory('{{ item.id }}', '{{ item.label }}')">
             <div class="label">{{ item.label }}</div>
             {% if item.value is not none %}
                 <div class="value">
                     {{ "%.2f"|format(item.value) }}{% if item.id not in ['BAMLC0A0CM', 'BAMLH0A0HYM2'] %}%{% endif %}
                     {% if item.direction == 'up' %}<span class="arrow up">&#9650;</span>
                     {% elif item.direction == 'down' %}<span class="arrow down">&#9660;</span>
-                    {% elif item.direction == 'flat' %}<span class="arrow flat">&#9644;</span>
-                    {% endif %}
+                    {% elif item.direction == 'flat' %}<span class="arrow flat">&#9644;</span>{% endif %}
                 </div>
                 {% if item.id == 'T10Y2Y' and item.value < 0 %}
                     <div class="inversion-flag">&#9888; Yield Curve Inverted</div>
@@ -561,7 +530,8 @@
             {% else %}
                 <div class="value na">N/A</div>
             {% endif %}
-            <div class="date">{{ item.date or '—' }}</div>
+            <div class="date">Updated: {{ item.date or '—' }}</div>
+            <div class="click-hint">Click for 3, 6, 12 month history</div>
         </div>
         {% endfor %}
     </div>
@@ -588,9 +558,7 @@
             </div>
             <div class="health-info">
                 <div class="health-label">Credit Stress</div>
-                <div class="health-detail">
-                    HY Spread: {% if health.hy_spread is not none %}{{ "%.2f"|format(health.hy_spread) }}%{% else %}N/A{% endif %}
-                </div>
+                <div class="health-detail">HY Spread: {% if health.hy_spread is not none %}{{ "%.2f"|format(health.hy_spread) }}%{% else %}N/A{% endif %}</div>
             </div>
         </div>
         <div class="health-card">
@@ -599,9 +567,7 @@
             </div>
             <div class="health-info">
                 <div class="health-label">Liquidity Stress</div>
-                <div class="health-detail">
-                    TED Spread: {% if health.ted_spread is not none %}{{ "%.2f"|format(health.ted_spread) }}%{% else %}N/A{% endif %}
-                </div>
+                <div class="health-detail">TED Spread: {% if health.ted_spread is not none %}{{ "%.2f"|format(health.ted_spread) }}%{% else %}N/A{% endif %}</div>
             </div>
         </div>
     </div>
@@ -609,27 +575,90 @@
 </div><!-- /tab-rates -->
 
 <!-- ================================================================== -->
-<!-- TAB 2: UK BANKING                                                  -->
+<!-- TAB 2: GLOBAL BONDS                                                -->
+<!-- ================================================================== -->
+<div class="tab-content" id="tab-bonds">
+
+    <div class="section-title">10-Year Government Bond Yields — 12 Countries</div>
+    <div class="table-wrap" style="border-radius:12px; border:1px solid var(--border);">
+        <table>
+            <thead>
+                <tr>
+                    <th>Country</th>
+                    <th>10Y Yield (%)</th>
+                    <th>Spread vs UST (bps)</th>
+                    <th>Updated</th>
+                    <th>Trend</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set us_10y_val = None %}
+                {% for item in grouped.global_bonds_10y %}
+                    {% if item.id == 'DGS10' %}{% set us_10y_val = item.value %}{% endif %}
+                {% endfor %}
+                {% for item in grouped.global_bonds_10y %}
+                <tr style="cursor:pointer;" onclick="openHistory('{{ item.id }}', '{{ item.label }}')">
+                    <td style="font-weight:600;">{{ item.label }}</td>
+                    <td class="rate-value">{% if item.value is not none %}{{ "%.2f"|format(item.value) }}{% else %}N/A{% endif %}</td>
+                    <td>
+                        {% if item.value is not none and us_10y_val is not none and item.id != 'DGS10' %}
+                            {% set spread_bps = ((item.value - us_10y_val) * 100) | round(0) | int %}
+                            <span style="color:{% if spread_bps > 0 %}var(--red){% elif spread_bps < 0 %}var(--green){% else %}var(--text-muted){% endif %}">
+                                {% if spread_bps > 0 %}+{% endif %}{{ spread_bps }} bps
+                            </span>
+                        {% elif item.id == 'DGS10' %}
+                            <span style="color:var(--text-muted);">Benchmark</span>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td style="color:var(--text-muted); font-size:0.72rem;">{{ item.date or '—' }}</td>
+                    <td>
+                        {% if item.direction == 'up' %}<span class="arrow up">&#9650;</span>
+                        {% elif item.direction == 'down' %}<span class="arrow down">&#9660;</span>
+                        {% elif item.direction == 'flat' %}<span class="arrow flat">&#9644;</span>
+                        {% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Bund-BTP Spread -->
+    <div class="spread-highlight">
+        <div>
+            <div class="sh-label">Bund-BTP Spread (Italy 10Y minus Germany 10Y)</div>
+            <div class="sh-value">
+                {% if bund_btp_spread is not none %}
+                    {{ "%.2f"|format(bund_btp_spread) }}% ({{ (bund_btp_spread * 100) | round(0) | int }} bps)
+                {% else %}N/A{% endif %}
+            </div>
+        </div>
+    </div>
+
+</div><!-- /tab-bonds -->
+
+<!-- ================================================================== -->
+<!-- TAB 3: UK BANKING                                                  -->
 <!-- ================================================================== -->
 <div class="tab-content" id="tab-uk">
 
     <div class="section-title">UK Money Market Rates</div>
     <div class="card-grid">
         {% for item in grouped.uk_rates %}
-        <div class="card accent-cyan">
+        <div class="card accent-cyan" onclick="openHistory('{{ item.id }}', '{{ item.label }}')">
             <div class="label">{{ item.label }}</div>
             {% if item.value is not none %}
                 <div class="value">
                     {{ "%.2f"|format(item.value) }}%
                     {% if item.direction == 'up' %}<span class="arrow up">&#9650;</span>
                     {% elif item.direction == 'down' %}<span class="arrow down">&#9660;</span>
-                    {% elif item.direction == 'flat' %}<span class="arrow flat">&#9644;</span>
-                    {% endif %}
+                    {% elif item.direction == 'flat' %}<span class="arrow flat">&#9644;</span>{% endif %}
                 </div>
             {% else %}
                 <div class="value na">N/A</div>
             {% endif %}
-            <div class="date">{{ item.date or '—' }}</div>
+            <div class="date">Updated: {{ item.date or '—' }}</div>
+            <div class="click-hint">Click for 3, 6, 12 month history</div>
         </div>
         {% endfor %}
     </div>
@@ -646,45 +675,37 @@
             </div>
             {% endfor %}
         {% else %}
-            <div class="empty-state">No regulatory news available at this time.</div>
+            <div class="empty-state">No regulatory news available.</div>
         {% endif %}
     </div>
 
     <div class="section-title" style="margin-top:2rem;">Key UK Banking Resources</div>
     <div class="quick-links">
         <a class="quick-link" href="https://www.bankofengland.co.uk/monetary-policy" target="_blank">
-            <div class="ql-icon">🏛️</div>
-            <div class="ql-text"><div class="ql-name">BoE Monetary Policy</div><div class="ql-desc">Bank Rate decisions & MPC minutes</div></div>
+            <div class="ql-icon">🏛️</div><div class="ql-text"><div class="ql-name">BoE Monetary Policy</div><div class="ql-desc">Bank Rate decisions & MPC minutes</div></div>
         </a>
         <a class="quick-link" href="https://www.bankofengland.co.uk/financial-stability" target="_blank">
-            <div class="ql-icon">🛡️</div>
-            <div class="ql-text"><div class="ql-name">BoE Financial Stability</div><div class="ql-desc">FPC reports & stress tests</div></div>
+            <div class="ql-icon">🛡️</div><div class="ql-text"><div class="ql-name">BoE Financial Stability</div><div class="ql-desc">FPC reports & stress tests</div></div>
         </a>
         <a class="quick-link" href="https://www.fca.org.uk/" target="_blank">
-            <div class="ql-icon">⚖️</div>
-            <div class="ql-text"><div class="ql-name">FCA</div><div class="ql-desc">Financial Conduct Authority</div></div>
+            <div class="ql-icon">⚖️</div><div class="ql-text"><div class="ql-name">FCA</div><div class="ql-desc">Financial Conduct Authority</div></div>
         </a>
         <a class="quick-link" href="https://www.prarulebook.co.uk/" target="_blank">
-            <div class="ql-icon">📋</div>
-            <div class="ql-text"><div class="ql-name">PRA Rulebook</div><div class="ql-desc">Prudential regulation rules</div></div>
+            <div class="ql-icon">📋</div><div class="ql-text"><div class="ql-name">PRA Rulebook</div><div class="ql-desc">Prudential regulation rules</div></div>
         </a>
         <a class="quick-link" href="https://www.ukfinance.org.uk/" target="_blank">
-            <div class="ql-icon">🏦</div>
-            <div class="ql-text"><div class="ql-name">UK Finance</div><div class="ql-desc">Industry body & reports</div></div>
+            <div class="ql-icon">🏦</div><div class="ql-text"><div class="ql-name">UK Finance</div><div class="ql-desc">Industry body & reports</div></div>
         </a>
         <a class="quick-link" href="https://www.gov.uk/government/organisations/hm-treasury" target="_blank">
-            <div class="ql-icon">💰</div>
-            <div class="ql-text"><div class="ql-name">HM Treasury</div><div class="ql-desc">UK government fiscal policy</div></div>
+            <div class="ql-icon">💰</div><div class="ql-text"><div class="ql-name">HM Treasury</div><div class="ql-desc">UK government fiscal policy</div></div>
         </a>
     </div>
-
 </div><!-- /tab-uk -->
 
 <!-- ================================================================== -->
-<!-- TAB 3: FINANCIAL NEWS                                              -->
+<!-- TAB 4: FINANCIAL NEWS                                              -->
 <!-- ================================================================== -->
 <div class="tab-content" id="tab-news">
-
     <div class="two-col">
         <div>
             <div class="section-title">UK &amp; European Finance</div>
@@ -699,7 +720,7 @@
                     </div>
                     {% endfor %}
                 {% else %}
-                    <div class="empty-state">Loading UK finance news…</div>
+                    <div class="empty-state">Loading UK finance news...</div>
                 {% endif %}
             </div>
         </div>
@@ -716,7 +737,7 @@
                     </div>
                     {% endfor %}
                 {% else %}
-                    <div class="empty-state">Loading global market news…</div>
+                    <div class="empty-state">Loading global market news...</div>
                 {% endif %}
             </div>
         </div>
@@ -724,233 +745,82 @@
 
     <div class="section-title" style="margin-top:2rem;">News Sources</div>
     <div class="quick-links">
-        <a class="quick-link" href="https://www.ft.com/" target="_blank">
-            <div class="ql-icon">📰</div>
-            <div class="ql-text"><div class="ql-name">Financial Times</div><div class="ql-desc">Global business & finance</div></div>
-        </a>
-        <a class="quick-link" href="https://www.reuters.com/business/finance/" target="_blank">
-            <div class="ql-icon">📊</div>
-            <div class="ql-text"><div class="ql-name">Reuters — Finance</div><div class="ql-desc">Breaking financial news</div></div>
-        </a>
-        <a class="quick-link" href="https://www.bbc.co.uk/news/business" target="_blank">
-            <div class="ql-icon">🔵</div>
-            <div class="ql-text"><div class="ql-name">BBC Business</div><div class="ql-desc">UK business news</div></div>
-        </a>
-        <a class="quick-link" href="https://www.cnbc.com/" target="_blank">
-            <div class="ql-icon">📈</div>
-            <div class="ql-text"><div class="ql-name">CNBC</div><div class="ql-desc">US & global markets</div></div>
-        </a>
-        <a class="quick-link" href="https://www.bloomberg.com/" target="_blank">
-            <div class="ql-icon">💹</div>
-            <div class="ql-text"><div class="ql-name">Bloomberg</div><div class="ql-desc">Markets & data</div></div>
-        </a>
-        <a class="quick-link" href="https://www.cityam.com/" target="_blank">
-            <div class="ql-icon">🏙️</div>
-            <div class="ql-text"><div class="ql-name">City A.M.</div><div class="ql-desc">London financial news</div></div>
-        </a>
-        <a class="quick-link" href="https://www.thisismoney.co.uk/" target="_blank">
-            <div class="ql-icon">💷</div>
-            <div class="ql-text"><div class="ql-name">This is Money</div><div class="ql-desc">UK personal finance & banking</div></div>
-        </a>
-        <a class="quick-link" href="https://www.bankingtech.com/" target="_blank">
-            <div class="ql-icon">🖥️</div>
-            <div class="ql-text"><div class="ql-name">FinTech Futures</div><div class="ql-desc">Banking technology news</div></div>
-        </a>
+        <a class="quick-link" href="https://www.ft.com/" target="_blank"><div class="ql-icon">📰</div><div class="ql-text"><div class="ql-name">Financial Times</div><div class="ql-desc">Global business & finance</div></div></a>
+        <a class="quick-link" href="https://www.reuters.com/business/finance/" target="_blank"><div class="ql-icon">📊</div><div class="ql-text"><div class="ql-name">Reuters — Finance</div><div class="ql-desc">Breaking financial news</div></div></a>
+        <a class="quick-link" href="https://www.bbc.co.uk/news/business" target="_blank"><div class="ql-icon">🔵</div><div class="ql-text"><div class="ql-name">BBC Business</div><div class="ql-desc">UK business news</div></div></a>
+        <a class="quick-link" href="https://www.cnbc.com/" target="_blank"><div class="ql-icon">📈</div><div class="ql-text"><div class="ql-name">CNBC</div><div class="ql-desc">US & global markets</div></div></a>
+        <a class="quick-link" href="https://www.bloomberg.com/" target="_blank"><div class="ql-icon">💹</div><div class="ql-text"><div class="ql-name">Bloomberg</div><div class="ql-desc">Markets & data</div></div></a>
+        <a class="quick-link" href="https://www.cityam.com/" target="_blank"><div class="ql-icon">🏙️</div><div class="ql-text"><div class="ql-name">City A.M.</div><div class="ql-desc">London financial news</div></div></a>
+        <a class="quick-link" href="https://www.thisismoney.co.uk/" target="_blank"><div class="ql-icon">💷</div><div class="ql-text"><div class="ql-name">This is Money</div><div class="ql-desc">UK personal finance & banking</div></div></a>
+        <a class="quick-link" href="https://www.economist.com/" target="_blank"><div class="ql-icon">🎩</div><div class="ql-text"><div class="ql-name">The Economist</div><div class="ql-desc">Analysis & commentary</div></div></a>
     </div>
-
 </div><!-- /tab-news -->
-
-<!-- ================================================================== -->
-<!-- TAB 4: UBL UK MONITOR                                              -->
-<!-- ================================================================== -->
-<div class="tab-content" id="tab-ubl">
-
-    <div class="section-title">UBL UK — Bank Profile</div>
-    <div class="card-grid card-grid-3">
-        <div class="card accent-purple">
-            <div class="label">Bank</div>
-            <div class="value" style="font-size:1.2rem;">United Bank Limited UK</div>
-            <div class="date">Subsidiary of United Bank Limited, Pakistan</div>
-        </div>
-        <div class="card accent-purple">
-            <div class="label">Website</div>
-            <div class="value" style="font-size:1.2rem;"><a href="https://www.ubluk.com" target="_blank" style="color:var(--accent-cyan); text-decoration:none;">www.ubluk.com</a></div>
-            <div class="date">Official UK banking portal</div>
-        </div>
-        <div class="card accent-purple">
-            <div class="label">Regulator</div>
-            <div class="value" style="font-size:1rem;">PRA & FCA Authorised</div>
-            <div class="date">Bank of England regulated</div>
-        </div>
-    </div>
-
-    <div class="section-title">UBL UK in the News</div>
-    {% if ubl_mentions %}
-        {% for item in ubl_mentions %}
-        <div class="ubl-mention-card">
-            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem;">
-                <span style="font-size:0.82rem; font-weight:600;">{{ item.title }}</span>
-                <span class="mention-badge">{{ item.query }}</span>
-            </div>
-            {% if item.summary %}<div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:0.3rem;">{{ item.summary }}</div>{% endif %}
-            <div style="display:flex; gap:1rem; font-size:0.65rem; color:var(--text-muted);">
-                {% if item.date %}<span>{{ item.date }}</span>{% endif %}
-                {% if item.link %}<a href="{{ item.link }}" target="_blank" style="color:var(--accent-cyan);">Read more →</a>{% endif %}
-            </div>
-        </div>
-        {% endfor %}
-    {% else %}
-        <div class="empty-state" style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px;">
-            No recent UBL UK mentions found in news. This is refreshed every 15 minutes.
-        </div>
-    {% endif %}
-
-    <div class="section-title" style="margin-top:2rem;">Monitor &amp; Reputation Channels</div>
-    <div class="quick-links">
-        <a class="quick-link" href="https://www.google.com/search?q=%22UBL+UK%22+OR+%22United+Bank+Limited+UK%22&tbm=nws" target="_blank">
-            <div class="ql-icon">🔍</div>
-            <div class="ql-text"><div class="ql-name">Google News — UBL UK</div><div class="ql-desc">Latest news mentions</div></div>
-        </a>
-        <a class="quick-link" href="https://uk.trustpilot.com/review/ubluk.com" target="_blank">
-            <div class="ql-icon">⭐</div>
-            <div class="ql-text"><div class="ql-name">Trustpilot — UBL UK</div><div class="ql-desc">Customer reviews & ratings</div></div>
-        </a>
-        <a class="quick-link" href="https://www.google.com/maps/search/UBL+UK/" target="_blank">
-            <div class="ql-icon">📍</div>
-            <div class="ql-text"><div class="ql-name">Google Reviews</div><div class="ql-desc">Branch reviews & ratings</div></div>
-        </a>
-        <a class="quick-link" href="https://twitter.com/search?q=%22UBL+UK%22+OR+%22ubluk%22&f=live" target="_blank">
-            <div class="ql-icon">🐦</div>
-            <div class="ql-text"><div class="ql-name">X/Twitter — UBL UK</div><div class="ql-desc">Live mentions & complaints</div></div>
-        </a>
-        <a class="quick-link" href="https://www.reddit.com/search/?q=UBL+UK+bank" target="_blank">
-            <div class="ql-icon">💬</div>
-            <div class="ql-text"><div class="ql-name">Reddit — UBL UK</div><div class="ql-desc">Community discussions</div></div>
-        </a>
-        <a class="quick-link" href="https://www.financial-ombudsman.org.uk/" target="_blank">
-            <div class="ql-icon">📋</div>
-            <div class="ql-text"><div class="ql-name">Financial Ombudsman</div><div class="ql-desc">Complaints & decisions data</div></div>
-        </a>
-        <a class="quick-link" href="https://register.fca.org.uk/" target="_blank">
-            <div class="ql-icon">🔎</div>
-            <div class="ql-text"><div class="ql-name">FCA Register</div><div class="ql-desc">UBL UK regulatory status</div></div>
-        </a>
-        <a class="quick-link" href="https://find-and-update.company-information.service.gov.uk/search?q=united+bank+limited" target="_blank">
-            <div class="ql-icon">🏢</div>
-            <div class="ql-text"><div class="ql-name">Companies House</div><div class="ql-desc">Filings & company info</div></div>
-        </a>
-    </div>
-
-</div><!-- /tab-ubl -->
 
 <!-- ================================================================== -->
 <!-- TAB 5: QUICK LINKS                                                 -->
 <!-- ================================================================== -->
 <div class="tab-content" id="tab-links">
-
-    <div class="section-title">Banking &amp; Regulation</div>
+    <div class="section-title">Central Banks</div>
     <div class="quick-links">
-        <a class="quick-link" href="https://www.ubluk.com" target="_blank">
-            <div class="ql-icon">🏦</div>
-            <div class="ql-text"><div class="ql-name">UBL UK Website</div><div class="ql-desc">www.ubluk.com</div></div>
-        </a>
-        <a class="quick-link" href="https://www.bankofengland.co.uk/" target="_blank">
-            <div class="ql-icon">🏛️</div>
-            <div class="ql-text"><div class="ql-name">Bank of England</div><div class="ql-desc">Central bank</div></div>
-        </a>
-        <a class="quick-link" href="https://www.fca.org.uk/" target="_blank">
-            <div class="ql-icon">⚖️</div>
-            <div class="ql-text"><div class="ql-name">FCA</div><div class="ql-desc">Financial Conduct Authority</div></div>
-        </a>
-        <a class="quick-link" href="https://www.bankofengland.co.uk/prudential-regulation" target="_blank">
-            <div class="ql-icon">🛡️</div>
-            <div class="ql-text"><div class="ql-name">PRA</div><div class="ql-desc">Prudential Regulation Authority</div></div>
-        </a>
-        <a class="quick-link" href="https://www.fscs.org.uk/" target="_blank">
-            <div class="ql-icon">🔒</div>
-            <div class="ql-text"><div class="ql-name">FSCS</div><div class="ql-desc">Deposit protection scheme</div></div>
-        </a>
-        <a class="quick-link" href="https://www.gov.uk/government/organisations/hm-treasury" target="_blank">
-            <div class="ql-icon">💰</div>
-            <div class="ql-text"><div class="ql-name">HM Treasury</div><div class="ql-desc">UK fiscal policy</div></div>
-        </a>
+        <a class="quick-link" href="https://www.bankofengland.co.uk/" target="_blank"><div class="ql-icon">🏛️</div><div class="ql-text"><div class="ql-name">Bank of England</div><div class="ql-desc">UK central bank</div></div></a>
+        <a class="quick-link" href="https://www.federalreserve.gov/" target="_blank"><div class="ql-icon">🇺🇸</div><div class="ql-text"><div class="ql-name">Federal Reserve</div><div class="ql-desc">US central bank</div></div></a>
+        <a class="quick-link" href="https://www.ecb.europa.eu/" target="_blank"><div class="ql-icon">🇪🇺</div><div class="ql-text"><div class="ql-name">European Central Bank</div><div class="ql-desc">ECB</div></div></a>
+        <a class="quick-link" href="https://www.boj.or.jp/en/" target="_blank"><div class="ql-icon">🇯🇵</div><div class="ql-text"><div class="ql-name">Bank of Japan</div><div class="ql-desc">BoJ</div></div></a>
+        <a class="quick-link" href="https://www.snb.ch/en/" target="_blank"><div class="ql-icon">🇨🇭</div><div class="ql-text"><div class="ql-name">Swiss National Bank</div><div class="ql-desc">SNB</div></div></a>
+        <a class="quick-link" href="https://www.rba.gov.au/" target="_blank"><div class="ql-icon">🇦🇺</div><div class="ql-text"><div class="ql-name">Reserve Bank of Australia</div><div class="ql-desc">RBA</div></div></a>
+    </div>
+
+    <div class="section-title">Regulation</div>
+    <div class="quick-links">
+        <a class="quick-link" href="https://www.fca.org.uk/" target="_blank"><div class="ql-icon">⚖️</div><div class="ql-text"><div class="ql-name">FCA</div><div class="ql-desc">Financial Conduct Authority</div></div></a>
+        <a class="quick-link" href="https://www.bankofengland.co.uk/prudential-regulation" target="_blank"><div class="ql-icon">🛡️</div><div class="ql-text"><div class="ql-name">PRA</div><div class="ql-desc">Prudential Regulation Authority</div></div></a>
+        <a class="quick-link" href="https://www.fscs.org.uk/" target="_blank"><div class="ql-icon">🔒</div><div class="ql-text"><div class="ql-name">FSCS</div><div class="ql-desc">Deposit protection scheme</div></div></a>
+        <a class="quick-link" href="https://www.bis.org/" target="_blank"><div class="ql-icon">🏧</div><div class="ql-text"><div class="ql-name">BIS</div><div class="ql-desc">Bank for International Settlements</div></div></a>
+        <a class="quick-link" href="https://www.imf.org/" target="_blank"><div class="ql-icon">🌐</div><div class="ql-text"><div class="ql-name">IMF</div><div class="ql-desc">Global economic outlook</div></div></a>
     </div>
 
     <div class="section-title">Market Data</div>
     <div class="quick-links">
-        <a class="quick-link" href="https://fred.stlouisfed.org/" target="_blank">
-            <div class="ql-icon">📊</div>
-            <div class="ql-text"><div class="ql-name">FRED</div><div class="ql-desc">Federal Reserve Economic Data</div></div>
-        </a>
-        <a class="quick-link" href="https://www.bankofengland.co.uk/statistics" target="_blank">
-            <div class="ql-icon">📈</div>
-            <div class="ql-text"><div class="ql-name">BoE Statistics</div><div class="ql-desc">UK monetary & financial stats</div></div>
-        </a>
-        <a class="quick-link" href="https://www.ons.gov.uk/" target="_blank">
-            <div class="ql-icon">📉</div>
-            <div class="ql-text"><div class="ql-name">ONS</div><div class="ql-desc">Office for National Statistics</div></div>
-        </a>
-        <a class="quick-link" href="https://tradingeconomics.com/united-kingdom/indicators" target="_blank">
-            <div class="ql-icon">🌍</div>
-            <div class="ql-text"><div class="ql-name">Trading Economics UK</div><div class="ql-desc">UK economic indicators</div></div>
-        </a>
-        <a class="quick-link" href="https://www.londonstockexchange.com/" target="_blank">
-            <div class="ql-icon">🇬🇧</div>
-            <div class="ql-text"><div class="ql-name">LSE</div><div class="ql-desc">London Stock Exchange</div></div>
-        </a>
-        <a class="quick-link" href="https://finance.yahoo.com/" target="_blank">
-            <div class="ql-icon">📱</div>
-            <div class="ql-text"><div class="ql-name">Yahoo Finance</div><div class="ql-desc">Markets & quotes</div></div>
-        </a>
-    </div>
-
-    <div class="section-title">News &amp; Research</div>
-    <div class="quick-links">
-        <a class="quick-link" href="https://www.ft.com/" target="_blank">
-            <div class="ql-icon">📰</div>
-            <div class="ql-text"><div class="ql-name">Financial Times</div><div class="ql-desc">Global business journalism</div></div>
-        </a>
-        <a class="quick-link" href="https://www.reuters.com/" target="_blank">
-            <div class="ql-icon">📡</div>
-            <div class="ql-text"><div class="ql-name">Reuters</div><div class="ql-desc">Breaking financial news</div></div>
-        </a>
-        <a class="quick-link" href="https://www.economist.com/" target="_blank">
-            <div class="ql-icon">🎩</div>
-            <div class="ql-text"><div class="ql-name">The Economist</div><div class="ql-desc">Analysis & commentary</div></div>
-        </a>
-        <a class="quick-link" href="https://www.cityam.com/" target="_blank">
-            <div class="ql-icon">🏙️</div>
-            <div class="ql-text"><div class="ql-name">City A.M.</div><div class="ql-desc">London business news</div></div>
-        </a>
-        <a class="quick-link" href="https://www.imf.org/" target="_blank">
-            <div class="ql-icon">🌐</div>
-            <div class="ql-text"><div class="ql-name">IMF</div><div class="ql-desc">Global economic outlook</div></div>
-        </a>
-        <a class="quick-link" href="https://www.bis.org/" target="_blank">
-            <div class="ql-icon">🏧</div>
-            <div class="ql-text"><div class="ql-name">BIS</div><div class="ql-desc">Bank for International Settlements</div></div>
-        </a>
+        <a class="quick-link" href="https://fred.stlouisfed.org/" target="_blank"><div class="ql-icon">📊</div><div class="ql-text"><div class="ql-name">FRED</div><div class="ql-desc">Federal Reserve Economic Data</div></div></a>
+        <a class="quick-link" href="https://www.bankofengland.co.uk/statistics" target="_blank"><div class="ql-icon">📈</div><div class="ql-text"><div class="ql-name">BoE Statistics</div><div class="ql-desc">UK monetary & financial stats</div></div></a>
+        <a class="quick-link" href="https://www.ons.gov.uk/" target="_blank"><div class="ql-icon">📉</div><div class="ql-text"><div class="ql-name">ONS</div><div class="ql-desc">Office for National Statistics</div></div></a>
+        <a class="quick-link" href="https://tradingeconomics.com/united-kingdom/indicators" target="_blank"><div class="ql-icon">🌍</div><div class="ql-text"><div class="ql-name">Trading Economics UK</div><div class="ql-desc">UK economic indicators</div></div></a>
+        <a class="quick-link" href="https://www.londonstockexchange.com/" target="_blank"><div class="ql-icon">🇬🇧</div><div class="ql-text"><div class="ql-name">LSE</div><div class="ql-desc">London Stock Exchange</div></div></a>
+        <a class="quick-link" href="https://finance.yahoo.com/" target="_blank"><div class="ql-icon">📱</div><div class="ql-text"><div class="ql-name">Yahoo Finance</div><div class="ql-desc">Markets & quotes</div></div></a>
     </div>
 
     <div class="section-title">Infrastructure</div>
     <div class="quick-links">
-        <a class="quick-link" href="https://zziai41.pythonanywhere.com" target="_blank">
-            <div class="ql-icon">🖥️</div>
-            <div class="ql-text"><div class="ql-name">PythonAnywhere</div><div class="ql-desc">CEOMonitor hosting dashboard</div></div>
-        </a>
-        <a class="quick-link" href="https://github.com/naveedk2535-tech/CEOMonitor" target="_blank">
-            <div class="ql-icon">🐙</div>
-            <div class="ql-text"><div class="ql-name">GitHub — CEOMonitor</div><div class="ql-desc">Source code repository</div></div>
-        </a>
+        <a class="quick-link" href="https://github.com/naveedk2535-tech/CEOMonitor" target="_blank"><div class="ql-icon">🐙</div><div class="ql-text"><div class="ql-name">GitHub — CEOMonitor</div><div class="ql-desc">Source code repository</div></div></a>
     </div>
-
 </div><!-- /tab-links -->
 
 </div><!-- /.container -->
 
+<!-- HISTORY MODAL -->
+<div class="modal-overlay" id="historyModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="modalTitle">Historical Data</h3>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-period-btns">
+                <button class="modal-period-btn" data-months="3" onclick="loadHistory(3)">3 Months</button>
+                <button class="modal-period-btn active" data-months="6" onclick="loadHistory(6)">6 Months</button>
+                <button class="modal-period-btn" data-months="12" onclick="loadHistory(12)">12 Months</button>
+            </div>
+            <div class="modal-chart-wrap">
+                <canvas id="historyChart"></canvas>
+                <div class="modal-loading" id="modalLoading">Loading data...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- FOOTER -->
 <footer class="footer">
-    <strong>CEOMonitor</strong> — UBL UK Executive Dashboard &nbsp;|&nbsp;
+    <strong>CEOMonitor</strong> — Banking Executive Dashboard &nbsp;|&nbsp;
     Rates from <strong>FRED</strong> (Federal Reserve Economic Data) &nbsp;|&nbsp;
     Rates updated: <strong>{{ last_updated or 'pending' }}</strong> &nbsp;|&nbsp;
     News updated: <strong>{{ news_last_updated or 'pending' }}</strong> &nbsp;|&nbsp;
@@ -959,7 +829,7 @@
 
 <!-- SCRIPTS -->
 <script>
-    // Live clock
+    // ---- Clock ----
     function updateClock() {
         const now = new Date();
         const opts = { weekday:'short', year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false, timeZone:'Europe/London' };
@@ -968,7 +838,7 @@
     updateClock();
     setInterval(updateClock, 1000);
 
-    // Tab navigation
+    // ---- Tab navigation ----
     document.querySelectorAll('.nav-tab').forEach(tab => {
         tab.addEventListener('click', () => {
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
@@ -978,20 +848,33 @@
         });
     });
 
-    // Yield-curve chart
-    const labels = {{ yc_labels | tojson }};
-    const values = {{ yc_values | tojson }};
+    // ---- Collapsible table ----
+    function toggleCollapsible(id) {
+        const body = document.getElementById(id + '-body');
+        const header = document.getElementById(id + '-toggle');
+        body.classList.toggle('open');
+        header.classList.toggle('open');
+        const toggleText = header.querySelector('.ch-toggle');
+        if (body.classList.contains('open')) {
+            toggleText.innerHTML = '<span class="ch-arrow" style="transform:rotate(180deg)">&#9660;</span> Hide table';
+        } else {
+            toggleText.innerHTML = '<span class="ch-arrow">&#9660;</span> Show table';
+        }
+    }
 
-    const ctx = document.getElementById('yieldCurveChart').getContext('2d');
-    new Chart(ctx, {
+    // ---- Yield Curve Chart ----
+    const ycLabels = {{ yc_labels | tojson }};
+    const ycValues = {{ yc_values | tojson }};
+
+    new Chart(document.getElementById('yieldCurveChart').getContext('2d'), {
         type: 'line',
         data: {
-            labels: labels,
+            labels: ycLabels,
             datasets: [{
                 label: 'Yield (%)',
-                data: values,
+                data: ycValues,
                 borderColor: '#06b6d4',
-                backgroundColor: 'rgba(6, 182, 212, 0.08)',
+                backgroundColor: 'rgba(6,182,212,0.08)',
                 borderWidth: 2.5,
                 pointBackgroundColor: '#06b6d4',
                 pointBorderColor: '#0b1120',
@@ -1007,40 +890,125 @@
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    display: true,
-                    labels: { color: '#94a3b8', font: { family: 'Inter', size: 12 } }
-                },
+                legend: { labels: { color: '#94a3b8', font: { family: 'Inter', size: 12 } } },
                 tooltip: {
-                    backgroundColor: '#1a2235',
-                    titleColor: '#f1f5f9',
-                    bodyColor: '#f1f5f9',
-                    borderColor: '#2a3550',
-                    borderWidth: 1,
-                    padding: 10,
-                    bodyFont: { family: 'Inter' },
-                    callbacks: {
-                        label: ctx => ctx.parsed.y !== null ? ctx.parsed.y.toFixed(2) + '%' : 'N/A'
-                    }
+                    backgroundColor: '#1a2235', titleColor: '#f1f5f9', bodyColor: '#f1f5f9',
+                    borderColor: '#2a3550', borderWidth: 1, padding: 10,
+                    callbacks: { label: ctx => ctx.parsed.y !== null ? ctx.parsed.y.toFixed(2) + '%' : 'N/A' }
                 }
             },
             scales: {
-                x: {
-                    ticks: { color: '#64748b', font: { family: 'Inter', size: 11 } },
-                    grid: { color: 'rgba(42, 53, 80, 0.5)' }
-                },
-                y: {
-                    ticks: {
-                        color: '#64748b',
-                        font: { family: 'Inter', size: 11 },
-                        callback: v => v.toFixed(2) + '%'
-                    },
-                    grid: { color: 'rgba(42, 53, 80, 0.5)' }
-                }
+                x: { ticks: { color: '#64748b', font: { family: 'Inter', size: 11 } }, grid: { color: 'rgba(42,53,80,0.5)' } },
+                y: { ticks: { color: '#64748b', font: { family: 'Inter', size: 11 }, callback: v => v.toFixed(2) + '%' }, grid: { color: 'rgba(42,53,80,0.5)' } }
             }
         }
     });
-</script>
 
+    // ---- History Modal ----
+    let currentSeriesId = '';
+    let currentSeriesLabel = '';
+    let historyChart = null;
+
+    function openHistory(seriesId, label) {
+        currentSeriesId = seriesId;
+        currentSeriesLabel = label;
+        document.getElementById('modalTitle').textContent = label + ' — Historical Trend';
+        document.getElementById('historyModal').classList.add('active');
+        // Reset period buttons
+        document.querySelectorAll('.modal-period-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.modal-period-btn[data-months="6"]').classList.add('active');
+        loadHistory(6);
+    }
+
+    function closeModal() {
+        document.getElementById('historyModal').classList.remove('active');
+        if (historyChart) { historyChart.destroy(); historyChart = null; }
+    }
+
+    // Close on overlay click
+    document.getElementById('historyModal').addEventListener('click', function(e) {
+        if (e.target === this) closeModal();
+    });
+
+    // Close on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeModal();
+    });
+
+    async function loadHistory(months) {
+        // Update button states
+        document.querySelectorAll('.modal-period-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector(`.modal-period-btn[data-months="${months}"]`).classList.add('active');
+
+        const loading = document.getElementById('modalLoading');
+        loading.style.display = 'flex';
+
+        if (historyChart) { historyChart.destroy(); historyChart = null; }
+
+        try {
+            const resp = await fetch(`/api/history/${currentSeriesId}?months=${months}`);
+            const json = await resp.json();
+
+            loading.style.display = 'none';
+
+            if (!json.data || json.data.length === 0) {
+                loading.textContent = 'No data available for this period.';
+                loading.style.display = 'flex';
+                return;
+            }
+
+            const labels = json.data.map(d => d.date);
+            const values = json.data.map(d => d.value);
+
+            const ctx = document.getElementById('historyChart').getContext('2d');
+            historyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: json.label,
+                        data: values,
+                        borderColor: '#06b6d4',
+                        backgroundColor: 'rgba(6,182,212,0.06)',
+                        borderWidth: 2,
+                        pointRadius: months <= 3 ? 3 : 1,
+                        pointHoverRadius: 5,
+                        pointBackgroundColor: '#06b6d4',
+                        fill: true,
+                        tension: 0.2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#94a3b8', font: { family: 'Inter' } } },
+                        tooltip: {
+                            backgroundColor: '#1a2235', titleColor: '#f1f5f9', bodyColor: '#f1f5f9',
+                            borderColor: '#2a3550', borderWidth: 1,
+                            callbacks: { label: ctx => ctx.parsed.y.toFixed(4) }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#64748b', font: { family: 'Inter', size: 10 },
+                                maxTicksLimit: 12, maxRotation: 45
+                            },
+                            grid: { color: 'rgba(42,53,80,0.3)' }
+                        },
+                        y: {
+                            ticks: { color: '#64748b', font: { family: 'Inter', size: 11 } },
+                            grid: { color: 'rgba(42,53,80,0.5)' }
+                        }
+                    }
+                }
+            });
+        } catch (err) {
+            loading.textContent = 'Failed to load data. Try again.';
+            loading.style.display = 'flex';
+        }
+    }
+</script>
 </body>
 </html>
