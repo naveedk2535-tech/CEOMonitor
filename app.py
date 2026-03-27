@@ -200,6 +200,8 @@ NEWS_FEEDS = {
         {"name": "BBC — Business", "url": "http://feeds.bbci.co.uk/news/business/rss.xml", "icon": "📰"},
     ],
     "central_banking": [
+        {"name": "Google News — UK Banking Regulation", "url": "https://news.google.com/rss/search?q=UK+bank+regulation+FCA+PRA+%22Bank+of+England%22&hl=en-GB&gl=GB&ceid=GB:en", "icon": "⚖️"},
+        {"name": "Google News — UK Banking News", "url": "https://news.google.com/rss/search?q=UK+banking+sector+high+street+banks&hl=en-GB&gl=GB&ceid=GB:en", "icon": "🏦"},
         {"name": "Bank of England — News", "url": "https://www.bankofengland.co.uk/rss/news", "icon": "🏛️"},
         {"name": "FCA — News", "url": "https://www.fca.org.uk/news/rss.xml", "icon": "⚖️"},
     ],
