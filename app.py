@@ -39,14 +39,14 @@ AUTH_PASSWORD = "admin1"
 # ---------------------------------------------------------------------------
 SERIES = {
     "central_banks": {
-        "FEDFUNDS":          "Fed Funds Rate",
-        "IUDSOIA":           "Bank of England (SONIA Proxy)",
-        "ECBMLFR":           "ECB Main Refinancing Rate",
-        "INTDSRJPM193N":     "Bank of Japan Rate",
-        "IRSTCI01CHM156N":   "Swiss National Bank Rate",
-        "IRSTCI01AUM156N":   "RBA Australia Rate",
-        "INTDSRCAM193N":     "Bank of Canada Rate",
-        "INTDSRCNM193N":     "PBoC China Rate",
+        "DFEDTARU":          "Fed Funds (Target Upper)",
+        "IUDSOIA":           "Bank of England (SONIA)",
+        "ECB_DFR":           "ECB Deposit Rate",
+        "IR3TIB01JPM156N":   "Japan Interbank Rate",
+        "IR3TIB01CHM156N":   "Swiss Interbank Rate",
+        "IR3TIB01AUM156N":   "Australia Interbank Rate",
+        "IRSTCI01CAM156N":   "Bank of Canada Rate",
+        "IR3TIB01CNM156N":   "China Interbank Rate",
     },
     "us_treasuries": {
         "DGS1MO":  "1 Month",
@@ -79,7 +79,7 @@ SERIES = {
         "SOFR":            "SOFR",
         "BAMLC0A0CM":      "IG Corporate Spread",
         "BAMLH0A0HYM2":    "HY Corporate Spread",
-        "TEDRATE":         "TED Spread",
+        "TEDRATE":         "TED Spread (Discontinued)",
         "DPRIME":          "US Prime Rate",
         "MORTGAGE30US":    "US 30-Year Mortgage",
     },
@@ -183,6 +183,56 @@ def _fetch_fred_series(series_id: str) -> dict:
         return {"value": None, "date": None, "direction": None}
 
 
+def _fetch_ecb_rate(rate_type: str = "DFR") -> dict:
+    """Fetch live ECB rate from ECB Statistical Data Warehouse.
+    rate_type: DFR (deposit facility), MRR_FR (main refinancing), MLF_FR (marginal lending)
+    """
+    url = f"https://data-api.ecb.europa.eu/service/data/FM/D.U2.EUR.4F.KR.{rate_type}.LEV?lastNObservations=1&format=csvdata"
+    try:
+        resp = requests.get(url, timeout=15)
+        resp.raise_for_status()
+        lines = resp.text.strip().split("\n")
+        if len(lines) >= 2:
+            fields = lines[-1].split(",")
+            value = float(fields[9])
+            date = fields[8]
+            return {"value": value, "date": date, "direction": None, "source": "ECB SDW"}
+    except Exception as exc:
+        logger.warning("Failed to fetch ECB %s: %s", rate_type, exc)
+    return {"value": None, "date": None, "direction": None}
+
+
+# Manual overrides for rates where FRED is hopelessly stale.
+# These are updated when central banks announce changes.
+# Format: series_id -> {value, date, label, source}
+MANUAL_OVERRIDES = {
+    # BoJ raised to 0.50% on Jan 24, 2025
+    "BOJ_POLICY": {"value": 0.50, "date": "2025-01-24", "label": "Bank of Japan Policy Rate", "source": "BoJ (manual)"},
+    # SNB cut to 0.25% on March 20, 2025
+    "SNB_POLICY": {"value": 0.25, "date": "2025-03-20", "label": "Swiss National Bank Rate", "source": "SNB (manual)"},
+}
+
+# Staleness threshold: FRED dates older than this many days get flagged
+STALE_THRESHOLD_DAYS = 60
+
+
+def _check_staleness(date_str: str) -> str:
+    """Return 'fresh', 'aging', or 'stale' based on date age."""
+    if not date_str:
+        return "stale"
+    try:
+        obs_date = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        age_days = (datetime.now(timezone.utc) - obs_date).days
+        if age_days <= 30:
+            return "fresh"
+        elif age_days <= STALE_THRESHOLD_DAYS:
+            return "aging"
+        else:
+            return "stale"
+    except ValueError:
+        return "stale"
+
+
 def _fetch_fred_history(series_id: str, months: int = 12) -> list[dict]:
     """Fetch FRED observations for a series over the past N months."""
     url = "https://api.stlouisfed.org/fred/series/observations"
@@ -262,17 +312,47 @@ def _ensure_rates():
     now = time.time()
     if now - _cache["rates_fetched_at"] < RATES_CACHE_SECONDS and _cache["rates"]:
         return
-    logger.info("Refreshing FRED data…")
+    logger.info("Refreshing rate data…")
     rates = {}
     for series_id, label in ALL_SERIES.items():
-        data = _fetch_fred_series(series_id)
-        data["label"] = label
+        if series_id == "ECB_DFR":
+            # Fetch live from ECB Statistical Data Warehouse
+            data = _fetch_ecb_rate("DFR")
+            if data["value"] is None:
+                # Fallback to FRED ECBDFR
+                data = _fetch_fred_series("ECBDFR")
+            data["label"] = label
+            data["source"] = data.get("source", "FRED")
+        else:
+            data = _fetch_fred_series(series_id)
+            data["label"] = label
+            data["source"] = "FRED"
+
+        # Add staleness flag
+        data["freshness"] = _check_staleness(data.get("date"))
         rates[series_id] = data
+
+    # Apply manual overrides for hopelessly stale FRED series
+    # Map interbank proxies to their policy rate overrides
+    override_map = {
+        "IR3TIB01JPM156N": "BOJ_POLICY",
+        "IR3TIB01CHM156N": "SNB_POLICY",
+    }
+    for fred_id, override_key in override_map.items():
+        if fred_id in rates and override_key in MANUAL_OVERRIDES:
+            fred_data = rates[fred_id]
+            override = MANUAL_OVERRIDES[override_key]
+            # Add the official policy rate as a separate display field
+            fred_data["official_rate"] = override["value"]
+            fred_data["official_date"] = override["date"]
+            fred_data["official_source"] = override["source"]
+            fred_data["official_label"] = override["label"]
+
     with _lock:
         _cache["rates"] = rates
         _cache["rates_fetched_at"] = now
         _cache["last_updated"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-    logger.info("FRED data refresh complete.")
+    logger.info("Rate data refresh complete.")
 
 
 def _ensure_news():
@@ -425,7 +505,9 @@ def api_history(series_id):
         months = 12
 
     label = ALL_SERIES.get(series_id, series_id)
-    data = _fetch_fred_history(series_id, months)
+    # ECB_DFR is not a real FRED series — use ECBDFR as fallback for history
+    fetch_id = "ECBDFR" if series_id == "ECB_DFR" else series_id
+    data = _fetch_fred_history(fetch_id, months)
 
     return jsonify({
         "series_id": series_id,

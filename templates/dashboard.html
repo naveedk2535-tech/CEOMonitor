@@ -163,6 +163,28 @@
             padding: 0.2rem 0.5rem; border-radius: 4px; margin-top: 0.5rem;
         }
 
+        /* Freshness badges */
+        .freshness-badge {
+            display: inline-block; font-size: 0.55rem; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            padding: 0.15rem 0.4rem; border-radius: 3px; margin-left: 0.4rem;
+            vertical-align: middle;
+        }
+        .freshness-badge.fresh { background: rgba(34,197,94,0.15); color: var(--green); }
+        .freshness-badge.aging { background: rgba(234,179,8,0.15); color: var(--yellow); }
+        .freshness-badge.stale { background: rgba(239,68,68,0.15); color: var(--red); }
+
+        .official-rate {
+            font-size: 0.68rem; color: var(--accent-purple);
+            margin-top: 0.3rem; padding: 0.3rem 0.5rem;
+            background: rgba(139,92,246,0.1); border-radius: 4px;
+            border-left: 2px solid var(--accent-purple);
+        }
+        .source-tag {
+            font-size: 0.55rem; color: var(--text-muted);
+            margin-top: 0.2rem; font-style: italic;
+        }
+
         /* COLLAPSIBLE TABLE */
         .collapsible-header {
             display: flex; align-items: center; justify-content: space-between;
@@ -412,10 +434,14 @@
 <div class="tab-content active" id="tab-rates">
 
     <!-- Central Bank Policy Rates -->
-    <div class="section-title">Central Bank Policy Rates</div>
+    <div class="section-title">Central Bank & Interbank Rates
+        <span style="font-size:0.6rem; text-transform:none; letter-spacing:normal; color:var(--text-muted); font-weight:400;">
+            &nbsp;— Sources: FRED (daily), ECB SDW (live), Manual overrides where noted
+        </span>
+    </div>
     <div class="card-grid">
         {% for item in grouped.central_banks %}
-        <div class="card{% if 'Bank of England' in item.label %} accent-cyan{% endif %}" onclick="openHistory('{{ item.id }}', '{{ item.label }}')">
+        <div class="card{% if 'Bank of England' in item.label %} accent-cyan{% elif item.get('freshness') == 'stale' %} accent-red{% endif %}" onclick="openHistory('{{ item.id }}', '{{ item.label }}')">
             <div class="label">{{ item.label }}</div>
             {% if item.value is not none %}
                 <div class="value">
@@ -427,7 +453,19 @@
             {% else %}
                 <div class="value na">N/A</div>
             {% endif %}
-            <div class="date">Updated: {{ item.date or '—' }}</div>
+            <div class="date">
+                Updated: {{ item.date or '—' }}
+                {% if item.get('freshness') == 'fresh' %}<span class="freshness-badge fresh">Live</span>
+                {% elif item.get('freshness') == 'aging' %}<span class="freshness-badge aging">Aging</span>
+                {% elif item.get('freshness') == 'stale' %}<span class="freshness-badge stale">Stale</span>{% endif %}
+            </div>
+            {% if item.get('official_rate') is not none %}
+            <div class="official-rate">
+                Official policy rate: <strong>{{ "%.2f"|format(item.official_rate) }}%</strong>
+                ({{ item.official_date }}, {{ item.official_source }})
+            </div>
+            {% endif %}
+            {% if item.get('source') %}<div class="source-tag">Source: {{ item.source }}</div>{% endif %}
             <div class="click-hint">Click for 3, 6, 12 month history</div>
         </div>
         {% endfor %}
