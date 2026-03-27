@@ -423,6 +423,7 @@
     <div class="nav-tab" data-tab="bonds">Global Bonds</div>
     <div class="nav-tab" data-tab="uk">UK Banking</div>
     <div class="nav-tab" data-tab="news">Financial News</div>
+    <div class="nav-tab" data-tab="ubl">UBL UK Monitor</div>
     <div class="nav-tab" data-tab="links">Quick Links</div>
 </nav>
 
@@ -801,7 +802,126 @@
 </div><!-- /tab-news -->
 
 <!-- ================================================================== -->
-<!-- TAB 5: QUICK LINKS                                                 -->
+<!-- TAB 5: UBL UK MONITOR                                              -->
+<!-- ================================================================== -->
+<div class="tab-content" id="tab-ubl">
+
+    <div class="section-title">UBL UK — What People Are Saying</div>
+    <p style="font-size:0.78rem; color:var(--text-secondary); margin-bottom:1.5rem;">
+        Live monitoring of news, social media, and public sentiment about
+        <a href="https://www.ubluk.com" target="_blank" style="color:var(--accent-cyan);">United Bank Limited UK</a>.
+        Auto-refreshes every 15 minutes.
+    </p>
+
+    <!-- Google News Mentions -->
+    <div class="section-title">News Mentions (Google News)</div>
+    {% if ubl_mentions %}
+        <div class="news-feed">
+            {% for item in ubl_mentions %}
+            <div class="news-item">
+                <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.3rem;">
+                    <span class="news-source">📰 Google News</span>
+                    <span style="display:inline-block; background:rgba(139,92,246,0.15); color:var(--accent-purple); font-size:0.55rem; font-weight:600; padding:0.1rem 0.4rem; border-radius:3px; text-transform:uppercase;">{{ item.query }}</span>
+                </div>
+                <div class="news-title"><a href="{{ item.link }}" target="_blank">{{ item.title }}</a></div>
+                {% if item.summary %}<div class="news-summary">{{ item.summary }}</div>{% endif %}
+                {% if item.date %}<div class="news-date">{{ item.date }}</div>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state" style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px;">
+            No recent UBL UK mentions found in Google News. This is refreshed every 15 minutes.
+        </div>
+    {% endif %}
+
+    <!-- Social Media & Reviews Links -->
+    <div class="section-title" style="margin-top:2rem;">Social Media & Reviews — Live Links</div>
+    <div class="quick-links">
+        <a class="quick-link" href="https://www.google.com/search?q=%22UBL+UK%22+OR+%22United+Bank+Limited+UK%22&tbm=nws" target="_blank">
+            <div class="ql-icon">🔍</div>
+            <div class="ql-text"><div class="ql-name">Google News — UBL UK</div><div class="ql-desc">Latest news mentions</div></div>
+        </a>
+        <a class="quick-link" href="https://www.google.com/search?q=%22UBL+UK%22+OR+%22United+Bank+Limited+UK%22+reviews+OR+complaints" target="_blank">
+            <div class="ql-icon">🔎</div>
+            <div class="ql-text"><div class="ql-name">Google — UBL UK Reviews</div><div class="ql-desc">Search reviews & complaints</div></div>
+        </a>
+        <a class="quick-link" href="https://uk.trustpilot.com/review/ubluk.com" target="_blank">
+            <div class="ql-icon">⭐</div>
+            <div class="ql-text"><div class="ql-name">Trustpilot — UBL UK</div><div class="ql-desc">Customer ratings & reviews</div></div>
+        </a>
+        <a class="quick-link" href="https://www.google.com/maps/search/UBL+UK+bank/" target="_blank">
+            <div class="ql-icon">📍</div>
+            <div class="ql-text"><div class="ql-name">Google Maps Reviews</div><div class="ql-desc">Branch reviews & ratings</div></div>
+        </a>
+        <a class="quick-link" href="https://twitter.com/search?q=%22UBL+UK%22+OR+%22ubluk%22+OR+%22United+Bank+Limited+UK%22&f=live" target="_blank">
+            <div class="ql-icon">🐦</div>
+            <div class="ql-text"><div class="ql-name">X/Twitter — Live Mentions</div><div class="ql-desc">Real-time tweets & complaints</div></div>
+        </a>
+        <a class="quick-link" href="https://www.facebook.com/search/posts/?q=UBL%20UK%20bank" target="_blank">
+            <div class="ql-icon">📘</div>
+            <div class="ql-text"><div class="ql-name">Facebook — UBL UK</div><div class="ql-desc">Posts & discussions</div></div>
+        </a>
+        <a class="quick-link" href="https://www.reddit.com/search/?q=UBL+UK+bank&sort=new" target="_blank">
+            <div class="ql-icon">💬</div>
+            <div class="ql-text"><div class="ql-name">Reddit — UBL UK</div><div class="ql-desc">Community discussions (newest)</div></div>
+        </a>
+        <a class="quick-link" href="https://www.linkedin.com/company/united-bank-limited-uk/" target="_blank">
+            <div class="ql-icon">💼</div>
+            <div class="ql-text"><div class="ql-name">LinkedIn — UBL UK</div><div class="ql-desc">Company page & employee posts</div></div>
+        </a>
+        <a class="quick-link" href="https://www.instagram.com/explore/tags/ubluk/" target="_blank">
+            <div class="ql-icon">📸</div>
+            <div class="ql-text"><div class="ql-name">Instagram — #UBLUK</div><div class="ql-desc">Tagged posts</div></div>
+        </a>
+        <a class="quick-link" href="https://www.youtube.com/results?search_query=UBL+UK+bank" target="_blank">
+            <div class="ql-icon">🎬</div>
+            <div class="ql-text"><div class="ql-name">YouTube — UBL UK</div><div class="ql-desc">Videos & mentions</div></div>
+        </a>
+    </div>
+
+    <!-- Regulatory & Complaints -->
+    <div class="section-title" style="margin-top:2rem;">Regulatory & Complaints</div>
+    <div class="quick-links">
+        <a class="quick-link" href="https://www.financial-ombudsman.org.uk/data/firm/united-bank-limited" target="_blank">
+            <div class="ql-icon">📋</div>
+            <div class="ql-text"><div class="ql-name">Financial Ombudsman</div><div class="ql-desc">Complaint decisions & data</div></div>
+        </a>
+        <a class="quick-link" href="https://register.fca.org.uk/s/search?q=united+bank+limited&type=Companies" target="_blank">
+            <div class="ql-icon">⚖️</div>
+            <div class="ql-text"><div class="ql-name">FCA Register</div><div class="ql-desc">Regulatory status & permissions</div></div>
+        </a>
+        <a class="quick-link" href="https://find-and-update.company-information.service.gov.uk/search?q=united+bank+limited" target="_blank">
+            <div class="ql-icon">🏢</div>
+            <div class="ql-text"><div class="ql-name">Companies House</div><div class="ql-desc">Filings, directors, accounts</div></div>
+        </a>
+        <a class="quick-link" href="https://www.bankofengland.co.uk/prudential-regulation/authorisations/which-firms-does-the-pra-regulate" target="_blank">
+            <div class="ql-icon">🏛️</div>
+            <div class="ql-text"><div class="ql-name">PRA Authorisation</div><div class="ql-desc">Bank of England regulated status</div></div>
+        </a>
+    </div>
+
+    <!-- Bank Website -->
+    <div class="section-title" style="margin-top:2rem;">UBL UK Official</div>
+    <div class="quick-links">
+        <a class="quick-link" href="https://www.ubluk.com" target="_blank">
+            <div class="ql-icon">🏦</div>
+            <div class="ql-text"><div class="ql-name">UBL UK Website</div><div class="ql-desc">www.ubluk.com — Official banking portal</div></div>
+        </a>
+        <a class="quick-link" href="https://www.ubluk.com/about-us" target="_blank">
+            <div class="ql-icon">ℹ️</div>
+            <div class="ql-text"><div class="ql-name">About UBL UK</div><div class="ql-desc">Company information</div></div>
+        </a>
+        <a class="quick-link" href="https://www.ubluk.com/contact-us" target="_blank">
+            <div class="ql-icon">📞</div>
+            <div class="ql-text"><div class="ql-name">Contact UBL UK</div><div class="ql-desc">Branches & customer service</div></div>
+        </a>
+    </div>
+
+</div><!-- /tab-ubl -->
+
+<!-- ================================================================== -->
+<!-- TAB 6: QUICK LINKS                                                 -->
 <!-- ================================================================== -->
 <div class="tab-content" id="tab-links">
     <div class="section-title">Central Banks</div>

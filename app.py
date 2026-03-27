@@ -7,6 +7,7 @@ from html import unescape
 from functools import wraps
 import re
 import time
+import hashlib
 
 import requests
 from flask import Flask, render_template, jsonify, request, redirect, url_for, session
@@ -208,11 +209,23 @@ NEWS_FEEDS = {
 }
 
 # ---------------------------------------------------------------------------
+# UBL UK Monitoring — Google News searches for bank mentions
+# ---------------------------------------------------------------------------
+UBL_SEARCH_QUERIES = [
+    "United Bank Limited UK",
+    "UBL UK bank",
+    "ubluk.com",
+    "UBL UK complaints",
+    "UBL UK reviews",
+]
+
+# ---------------------------------------------------------------------------
 # Time-based cache (no APScheduler needed)
 # ---------------------------------------------------------------------------
 _cache: dict = {
     "rates": {},
     "news": {},
+    "ubl_mentions": [],
     "last_updated": None,
     "news_last_updated": None,
     "rates_fetched_at": 0,
@@ -392,6 +405,17 @@ def _parse_rss(url: str, max_items: int = 8) -> list[dict]:
         return []
 
 
+def _search_google_news(query: str, max_items: int = 5) -> list[dict]:
+    """Search Google News RSS for mentions of a query."""
+    try:
+        encoded = requests.utils.quote(query)
+        url = f"https://news.google.com/rss/search?q={encoded}&hl=en-GB&gl=GB&ceid=GB:en"
+        return _parse_rss(url, max_items)
+    except Exception as exc:
+        logger.warning("Failed Google News search for %s: %s", query, exc)
+        return []
+
+
 def _ensure_rates():
     """Refresh rates if cache is stale."""
     now = time.time()
@@ -463,11 +487,24 @@ def _ensure_news():
             category_items.extend(articles)
         news[category] = category_items
 
+    # UBL UK mentions from Google News
+    ubl_mentions = []
+    seen_titles = set()
+    for query in UBL_SEARCH_QUERIES:
+        results = _search_google_news(query)
+        for item in results:
+            title_hash = hashlib.md5(item["title"].encode()).hexdigest()
+            if title_hash not in seen_titles:
+                seen_titles.add(title_hash)
+                item["query"] = query
+                ubl_mentions.append(item)
+
     with _lock:
         _cache["news"] = news
+        _cache["ubl_mentions"] = ubl_mentions
         _cache["news_fetched_at"] = now
         _cache["news_last_updated"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-    logger.info("News refresh complete.")
+    logger.info("News refresh complete — %d UBL mentions found.", len(ubl_mentions))
 
 
 # ---------------------------------------------------------------------------
@@ -515,6 +552,7 @@ def dashboard():
     with _lock:
         rates = dict(_cache["rates"])
         news = dict(_cache["news"])
+        ubl_mentions = list(_cache["ubl_mentions"])
         last_updated = _cache["last_updated"]
         news_last_updated = _cache["news_last_updated"]
 
@@ -587,6 +625,7 @@ def dashboard():
         yc_values=yc_values,
         health=health,
         news=news,
+        ubl_mentions=ubl_mentions,
         bund_btp_spread=bund_btp_spread,
         last_updated=last_updated,
         news_last_updated=news_last_updated,
