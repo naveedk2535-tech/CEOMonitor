@@ -195,18 +195,18 @@ ALL_SERIES["ECB_MLF"] = "ECB Marginal Lending Rate"
 # ---------------------------------------------------------------------------
 NEWS_FEEDS = {
     "uk_finance": [
+        {"name": "Google News — UK Finance", "url": "https://news.google.com/rss/search?q=UK+finance+economy+banking+interest+rates&hl=en-GB&gl=GB&ceid=GB:en", "icon": "🇬🇧"},
+        {"name": "Google News — UK Economy", "url": "https://news.google.com/rss/search?q=UK+economy+inflation+Bank+of+England&hl=en-GB&gl=GB&ceid=GB:en", "icon": "📊"},
         {"name": "BBC — Business", "url": "http://feeds.bbci.co.uk/news/business/rss.xml", "icon": "📰"},
-        {"name": "The Guardian — Business", "url": "https://www.theguardian.com/uk/business/rss", "icon": "📊"},
-        {"name": "BBC — Economy", "url": "http://feeds.bbci.co.uk/news/business/economy/rss.xml", "icon": "📉"},
     ],
     "central_banking": [
         {"name": "Bank of England — News", "url": "https://www.bankofengland.co.uk/rss/news", "icon": "🏛️"},
         {"name": "FCA — News", "url": "https://www.fca.org.uk/news/rss.xml", "icon": "⚖️"},
     ],
     "global_markets": [
+        {"name": "Google News — Global Markets", "url": "https://news.google.com/rss/search?q=global+markets+stocks+bonds+finance&hl=en-GB&gl=GB&ceid=GB:en", "icon": "🌍"},
+        {"name": "Google News — Central Banks", "url": "https://news.google.com/rss/search?q=Federal+Reserve+ECB+central+bank+interest+rate&hl=en-GB&gl=GB&ceid=GB:en", "icon": "🏛️"},
         {"name": "CNBC — Finance", "url": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664", "icon": "📈"},
-        {"name": "Bloomberg — Markets", "url": "https://feeds.bloomberg.com/markets/news.rss", "icon": "💹"},
-        {"name": "Google News — Banking", "url": "https://news.google.com/rss/search?q=banking+finance+interest+rates&hl=en-GB&gl=GB&ceid=GB:en", "icon": "🔍"},
     ],
 }
 
