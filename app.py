@@ -88,9 +88,9 @@ SERIES = {
         "MORTGAGE30US":    "US 30-Year Mortgage",
     },
     "uk_rates": {
-        "IR3TIB01GBM156N": "UK 3-Month Interbank",
-        "INTDSRGBM193N":   "UK Short-Term Rate",
-        "IRLTLT01GBQ156N": "UK Long-Term Govt Bond (Quarterly)",
+        "IUDSOIA":           "UK SONIA (Overnight)",
+        "IRSTCI01GBM156N":   "UK Short-Term Rate (Monthly)",
+        "IRLTLT01GBM156N":   "UK Long-Term Gilt (Monthly)",
     },
     "fx_rates": {
         "DEXUSUK":  "GBP/USD",
@@ -197,6 +197,7 @@ NEWS_FEEDS = {
     "uk_finance": [
         {"name": "BBC — Business", "url": "http://feeds.bbci.co.uk/news/business/rss.xml", "icon": "📰"},
         {"name": "The Guardian — Business", "url": "https://www.theguardian.com/uk/business/rss", "icon": "📊"},
+        {"name": "BBC — Economy", "url": "http://feeds.bbci.co.uk/news/business/economy/rss.xml", "icon": "📉"},
     ],
     "central_banking": [
         {"name": "Bank of England — News", "url": "https://www.bankofengland.co.uk/rss/news", "icon": "🏛️"},
@@ -205,6 +206,7 @@ NEWS_FEEDS = {
     "global_markets": [
         {"name": "CNBC — Finance", "url": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664", "icon": "📈"},
         {"name": "Bloomberg — Markets", "url": "https://feeds.bloomberg.com/markets/news.rss", "icon": "💹"},
+        {"name": "Google News — Banking", "url": "https://news.google.com/rss/search?q=banking+finance+interest+rates&hl=en-GB&gl=GB&ceid=GB:en", "icon": "🔍"},
     ],
 }
 
@@ -212,11 +214,11 @@ NEWS_FEEDS = {
 # UBL UK Monitoring — Google News searches for bank mentions
 # ---------------------------------------------------------------------------
 UBL_SEARCH_QUERIES = [
-    "United Bank Limited UK",
-    "UBL UK bank",
-    "ubluk.com",
-    "UBL UK complaints",
-    "UBL UK reviews",
+    '"United Bank Limited" UK',
+    '"UBL UK"',
+    "site:ubluk.com",
+    '"United Bank Limited" London',
+    '"UBL" bank UK remittance',
 ]
 
 # ---------------------------------------------------------------------------

@@ -814,7 +814,11 @@
     </p>
 
     <!-- Google News Mentions -->
-    <div class="section-title">News Mentions (Google News)</div>
+    <div class="section-title">News Mentions (Google News) — {{ ubl_mentions | length }} results found</div>
+    <p style="font-size:0.72rem; color:var(--text-muted); margin-bottom:1rem;">
+        Note: If results appear old, it means there hasn't been recent public news coverage. This is normal for smaller banks.
+        Check the social media links below for more real-time mentions.
+    </p>
     {% if ubl_mentions %}
         <div class="news-feed">
             {% for item in ubl_mentions %}
@@ -825,13 +829,13 @@
                 </div>
                 <div class="news-title"><a href="{{ item.link }}" target="_blank">{{ item.title }}</a></div>
                 {% if item.summary %}<div class="news-summary">{{ item.summary }}</div>{% endif %}
-                {% if item.date %}<div class="news-date">{{ item.date }}</div>{% endif %}
+                {% if item.date %}<div class="news-date">Published: {{ item.date }}</div>{% endif %}
             </div>
             {% endfor %}
         </div>
     {% else %}
         <div class="empty-state" style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px;">
-            No recent UBL UK mentions found in Google News. This is refreshed every 15 minutes.
+            No UBL UK mentions found in Google News. This is refreshed every 15 minutes.
         </div>
     {% endif %}
 
