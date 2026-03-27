@@ -391,12 +391,39 @@
         }
 
         @media (max-width: 768px) {
-            .header { padding: 1rem; }
-            .container { padding: 1rem; }
+            .header {
+                padding: 0.75rem 1rem;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+            .header h1 { font-size: 1.1rem; }
+            .header .subtitle { font-size: 0.72rem; }
+            .header-right {
+                width: 100%;
+                justify-content: space-between;
+                flex-direction: row-reverse;
+            }
+            .header-clock { text-align: left; }
+            .header-clock > div:first-child { font-size: 0.7rem; }
+            #clock { font-size: 0.85rem !important; }
+            .logout-btn { padding: 0.35rem 0.75rem; font-size: 0.68rem; }
+            .container { padding: 0.75rem; }
             .card .value { font-size: 1.3rem; }
-            .chart-container { height: 250px; }
-            .nav-tabs { padding: 0 1rem; }
-            .modal { width: 95%; }
+            .card-grid { grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+            .card-grid-wide { grid-template-columns: 1fr; }
+            .chart-container { height: 220px; }
+            .nav-tabs { padding: 0 0.5rem; gap: 0; }
+            .nav-tab { padding: 0.6rem 0.75rem; font-size: 0.65rem; }
+            .modal { width: 96%; max-height: 90vh; }
+            .two-col { grid-template-columns: 1fr; gap: 1rem; }
+            .quick-links { grid-template-columns: 1fr; }
+            .section-title { font-size: 0.68rem; margin: 1.25rem 0 0.75rem; }
+        }
+
+        @media (max-width: 420px) {
+            .card-grid { grid-template-columns: 1fr; }
+            .header h1 { font-size: 0.95rem; }
         }
     </style>
 </head>
@@ -406,7 +433,7 @@
 <header class="header">
     <div class="header-left">
         <h1><span>CEOMonitor</span> — Executive Dashboard</h1>
-        <div class="subtitle">Banking & Financial Intelligence Platform</div>
+        <div class="subtitle">Real-Time Intelligence. Sharper Decisions.</div>
     </div>
     <div class="header-right">
         <div class="header-clock">
