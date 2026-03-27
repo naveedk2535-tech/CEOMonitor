@@ -108,6 +108,41 @@
         }
         .section-title:first-child { margin-top: 0; }
 
+        /* Universal expandable sections */
+        .expand-header {
+            display: flex; align-items: center; justify-content: space-between;
+            cursor: pointer; padding: 0.65rem 1rem;
+            margin: 1.5rem 0 0.75rem;
+            background: linear-gradient(135deg, rgba(6,182,212,0.06) 0%, rgba(59,130,246,0.04) 100%);
+            border: 1px solid var(--border);
+            border-radius: 10px; transition: all 0.2s;
+            user-select: none;
+        }
+        .expand-header:first-child { margin-top: 0; }
+        .expand-header:hover { background: rgba(6,182,212,0.1); border-color: rgba(6,182,212,0.3); }
+        .expand-header .eh-label {
+            font-size: 0.75rem; font-weight: 600; color: var(--accent-cyan);
+            text-transform: uppercase; letter-spacing: 0.1em;
+        }
+        .expand-header .eh-toggle {
+            font-size: 0.65rem; color: var(--text-muted);
+            display: flex; align-items: center; gap: 0.3rem;
+            transition: color 0.2s;
+        }
+        .expand-header:hover .eh-toggle { color: var(--accent-cyan); }
+        .expand-header .eh-arrow {
+            display: inline-block; transition: transform 0.3s;
+        }
+        .expand-header.collapsed .eh-arrow { transform: rotate(-90deg); }
+        .expand-body {
+            overflow: hidden;
+            transition: max-height 0.4s ease, opacity 0.3s ease;
+            max-height: 5000px; opacity: 1;
+        }
+        .expand-body.collapsed {
+            max-height: 0; opacity: 0;
+        }
+
         /* CARDS */
         .card-grid {
             display: grid;
@@ -195,25 +230,7 @@
             margin-top: 0.2rem; font-style: italic;
         }
 
-        /* COLLAPSIBLE TABLE */
-        .collapsible-header {
-            display: flex; align-items: center; justify-content: space-between;
-            cursor: pointer; padding: 0.75rem 1rem;
-            background: var(--bg-secondary); border: 1px solid var(--border);
-            border-radius: 12px; transition: all 0.2s;
-        }
-        .collapsible-header:hover { background: var(--bg-card-hover); }
-        .collapsible-header .ch-label {
-            font-size: 0.78rem; font-weight: 600; color: var(--text-primary);
-        }
-        .collapsible-header .ch-toggle {
-            font-size: 0.7rem; color: var(--accent-cyan);
-            display: flex; align-items: center; gap: 0.3rem;
-        }
-        .collapsible-header .ch-arrow {
-            transition: transform 0.3s; display: inline-block;
-        }
-        .collapsible-header.open .ch-arrow { transform: rotate(180deg); }
+        /* Legacy collapsible (kept for treasury data table) */
         .collapsible-body {
             max-height: 0; overflow: hidden;
             transition: max-height 0.4s ease;
@@ -400,11 +417,6 @@
             border-top: 1px solid var(--border); margin-top: 2rem;
         }
 
-        /* Mobile collapsible sections (treasury, inflation, spreads) */
-        .mobile-collapse-header {
-            display: none;
-        }
-
         /* News sub-tabs */
         .news-subtabs {
             display: flex; gap: 0.5rem; margin-bottom: 1rem;
@@ -453,29 +465,8 @@
             .two-col { grid-template-columns: 1fr; gap: 1rem; }
             .quick-links { grid-template-columns: 1fr; }
             .section-title { font-size: 0.68rem; margin: 1.25rem 0 0.75rem; }
-
-            /* Mobile collapsible sections */
-            .mobile-collapse-header {
-                display: flex; align-items: center; justify-content: space-between;
-                cursor: pointer; padding: 0.65rem 0.85rem;
-                background: var(--bg-secondary); border: 1px solid var(--border);
-                border-radius: 10px; margin-bottom: 0.5rem;
-            }
-            .mobile-collapse-header .mc-label {
-                font-size: 0.7rem; font-weight: 600; color: var(--text-primary);
-                text-transform: uppercase; letter-spacing: 0.06em;
-            }
-            .mobile-collapse-header .mc-toggle {
-                font-size: 0.65rem; color: var(--accent-cyan);
-            }
-            .mobile-collapse-body {
-                max-height: 0; overflow: hidden;
-                transition: max-height 0.4s ease;
-            }
-            .mobile-collapse-body.mc-open { max-height: 2000px; }
-
-            /* Hide desktop section titles for collapsible sections */
-            .mobile-hide-title { display: none; }
+            .expand-header { margin: 1rem 0 0.5rem; padding: 0.55rem 0.85rem; }
+            .expand-header .eh-label { font-size: 0.68rem; }
         }
 
         @media (max-width: 420px) {
@@ -526,11 +517,11 @@
 <div class="tab-content active" id="tab-rates">
 
     <!-- Central Bank Policy Rates — Multi-source cards -->
-    <div class="section-title">Central Bank & Policy Rates
-        <span style="font-size:0.6rem; text-transform:none; letter-spacing:normal; color:var(--text-muted); font-weight:400;">
-            &nbsp;— Multiple sources per bank to ensure accuracy
-        </span>
+    <div class="expand-header" onclick="toggleExpand(this)">
+        <span class="eh-label">Central Bank & Policy Rates</span>
+        <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
     </div>
+    <div class="expand-body">
     <div class="card-grid card-grid-wide">
         {% for card in cb_cards %}
         <div class="card" onclick="openHistory('{{ card.history_id }}', '{{ card.bank }}')">
@@ -569,8 +560,14 @@
         {% endfor %}
     </div>
 
+    </div><!-- /expand-body central banks -->
+
     <!-- FX Rates -->
-    <div class="section-title">Foreign Exchange</div>
+    <div class="expand-header" onclick="toggleExpand(this)">
+        <span class="eh-label">Foreign Exchange</span>
+        <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+    </div>
+    <div class="expand-body">
     <div class="card-grid">
         {% for item in grouped.fx_rates %}
         <div class="card accent-amber" onclick="openHistory('{{ item.id }}', '{{ item.label }}')">
@@ -591,19 +588,15 @@
         {% endfor %}
     </div>
 
-    <!-- US Treasury Yield Curve — COLLAPSIBLE TABLE (mobile-collapsible wrapper) -->
-    <div class="mobile-collapse-header" onclick="toggleMobileCollapse('mc-treasury')">
-        <span class="mc-label">US Treasury Yield Curve</span>
-        <span class="mc-toggle">&#9660; Expand</span>
+    </div><!-- /expand-body fx -->
+
+    <!-- US Treasury Yield Curve -->
+    <div class="expand-header" onclick="toggleExpand(this)">
+        <span class="eh-label">US Treasury Yield Curve</span>
+        <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
     </div>
-    <div class="section-title mobile-hide-title">US Treasury Yield Curve</div>
-    <div class="mobile-collapse-body mc-open" id="mc-treasury">
-    <div class="collapsible-header" id="yc-toggle" onclick="toggleCollapsible('yc')">
-        <span class="ch-label">Yield Curve Data Table ({{ grouped.us_treasuries | length }} maturities)</span>
-        <span class="ch-toggle"><span class="ch-arrow" id="yc-arrow">&#9660;</span> Show table</span>
-    </div>
-    <div class="collapsible-body" id="yc-body">
-        <div class="table-wrap">
+    <div class="expand-body">
+        <div class="table-wrap" style="border-radius:12px; border:1px solid var(--border)">
             <table>
                 <thead>
                     <tr><th>Maturity</th><th>Yield (%)</th><th>Updated</th><th>Trend</th></tr>
@@ -625,20 +618,17 @@
                 </tbody>
             </table>
         </div>
-    </div>
     <div class="chart-container">
         <canvas id="yieldCurveChart"></canvas>
     </div>
+    </div><!-- /expand-body treasury -->
 
-    </div><!-- /mc-treasury -->
-
-    <!-- Inflation (mobile-collapsible) -->
-    <div class="mobile-collapse-header" onclick="toggleMobileCollapse('mc-inflation')">
-        <span class="mc-label">Inflation Indicators</span>
-        <span class="mc-toggle">&#9660; Expand</span>
+    <!-- Inflation -->
+    <div class="expand-header" onclick="toggleExpand(this)">
+        <span class="eh-label">Inflation Indicators</span>
+        <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
     </div>
-    <div class="section-title mobile-hide-title">Inflation Indicators</div>
-    <div class="mobile-collapse-body mc-open" id="mc-inflation">
+    <div class="expand-body">
     <div class="card-grid">
         {% for item in grouped.inflation %}
         <div class="card accent-red" onclick="openHistory('{{ item.id }}', '{{ item.label }}')">
@@ -659,15 +649,14 @@
         {% endfor %}
     </div>
 
-    </div><!-- /mc-inflation -->
+    </div><!-- /expand-body inflation -->
 
-    <!-- Spreads & Money Markets (mobile-collapsible) -->
-    <div class="mobile-collapse-header" onclick="toggleMobileCollapse('mc-spreads')">
-        <span class="mc-label">Spreads &amp; Money Markets</span>
-        <span class="mc-toggle">&#9660; Expand</span>
+    <!-- Spreads & Money Markets -->
+    <div class="expand-header" onclick="toggleExpand(this)">
+        <span class="eh-label">Spreads &amp; Money Markets</span>
+        <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
     </div>
-    <div class="section-title mobile-hide-title">Spreads &amp; Money Markets</div>
-    <div class="mobile-collapse-body mc-open" id="mc-spreads">
+    <div class="expand-body">
     <div class="card-grid card-grid-wide">
         {% for item in grouped.spreads %}
         <div class="card" onclick="openHistory('{{ item.id }}', '{{ item.label }}')">
@@ -691,10 +680,14 @@
         {% endfor %}
     </div>
 
-    </div><!-- /mc-spreads -->
+    </div><!-- /expand-body spreads -->
 
     <!-- Market Health -->
-    <div class="section-title">Market Health Indicators</div>
+    <div class="expand-header" onclick="toggleExpand(this)">
+        <span class="eh-label">Market Health Indicators</span>
+        <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+    </div>
+    <div class="expand-body">
     <div class="health-grid">
         <div class="health-card">
             <div class="traffic-light {{ health.yield_curve }}">
@@ -728,6 +721,7 @@
             </div>
         </div>
     </div>
+    </div><!-- /expand-body health -->
 
 </div><!-- /tab-rates -->
 
@@ -1124,28 +1118,19 @@
     updateClock();
     setInterval(updateClock, 1000);
 
+    // ---- Expandable sections ----
+    function toggleExpand(header) {
+        const body = header.nextElementSibling;
+        header.classList.toggle('collapsed');
+        body.classList.toggle('collapsed');
+    }
+
     // ---- News sub-tabs ----
     function switchNewsTab(tab) {
         document.querySelectorAll('.news-subtab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.news-panel').forEach(p => p.classList.remove('active'));
         document.querySelector(`.news-subtab[data-newstab="${tab}"]`).classList.add('active');
         document.getElementById('newspanel-' + tab).classList.add('active');
-    }
-
-    // ---- Mobile collapsible sections ----
-    function toggleMobileCollapse(id) {
-        const body = document.getElementById(id);
-        const header = body.previousElementSibling.previousElementSibling; // skip the desktop title
-        body.classList.toggle('mc-open');
-        const toggle = header.querySelector('.mc-toggle');
-        toggle.innerHTML = body.classList.contains('mc-open') ? '&#9650; Collapse' : '&#9660; Expand';
-    }
-
-    // On page load, collapse mobile sections if on mobile
-    if (window.innerWidth <= 768) {
-        document.querySelectorAll('.mobile-collapse-body').forEach(el => {
-            el.classList.remove('mc-open');
-        });
     }
 
     // ---- Tab navigation ----
@@ -1158,19 +1143,7 @@
         });
     });
 
-    // ---- Collapsible table ----
-    function toggleCollapsible(id) {
-        const body = document.getElementById(id + '-body');
-        const header = document.getElementById(id + '-toggle');
-        body.classList.toggle('open');
-        header.classList.toggle('open');
-        const toggleText = header.querySelector('.ch-toggle');
-        if (body.classList.contains('open')) {
-            toggleText.innerHTML = '<span class="ch-arrow" style="transform:rotate(180deg)">&#9660;</span> Hide table';
-        } else {
-            toggleText.innerHTML = '<span class="ch-arrow">&#9660;</span> Show table';
-        }
-    }
+    // (collapsible table removed — now using universal expand)
 
     // ---- Yield Curve Chart ----
     const ycLabels = {{ yc_labels | tojson }};
