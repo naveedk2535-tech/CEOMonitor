@@ -509,7 +509,8 @@
 
 <!-- NAVIGATION -->
 <nav class="nav-tabs">
-    <div class="nav-tab active" data-tab="rates">Rates & Markets</div>
+    <div class="nav-tab active" data-tab="brief">Executive Brief</div>
+    <div class="nav-tab" data-tab="rates">Rates & Markets</div>
     <div class="nav-tab" data-tab="bonds">Global Bonds</div>
     <div class="nav-tab" data-tab="uk">UK Banking</div>
     <div class="nav-tab" data-tab="news">Financial News</div>
@@ -520,9 +521,183 @@
 <div class="container">
 
 <!-- ================================================================== -->
+<!-- TAB 0: EXECUTIVE BRIEF                                             -->
+<!-- ================================================================== -->
+<div class="tab-content active" id="tab-brief">
+
+    <!-- Market Snapshots -->
+    <div class="expand-header" onclick="toggleExpand(this)">
+        <span class="eh-label">Market Snapshots</span>
+        <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+    </div>
+    <div class="expand-body">
+    <div class="card-grid card-grid-wide" style="margin-top:0.75rem;">
+        <!-- GBP/USD from FRED -->
+        {% set gbpusd = grouped.get('fx_rates', [])|selectattr('id', 'equalto', 'DEXUSUK')|first %}
+        <div class="card accent-amber" onclick="openHistory('DEXUSUK', 'GBP/USD')">
+            <div class="label">GBP / USD</div>
+            {% if gbpusd and gbpusd.value is not none %}
+            <div class="value">{{ "%.4f"|format(gbpusd.value) }}
+                {% if gbpusd.direction == 'up' %}<span class="arrow up">&#9650;</span>{% elif gbpusd.direction == 'down' %}<span class="arrow down">&#9660;</span>{% endif %}
+            </div>
+            {% else %}<div class="value na">N/A</div>{% endif %}
+            <div class="date">{{ gbpusd.date if gbpusd else '—' }} | FRED</div>
+            <div style="font-size:0.68rem; color:var(--text-secondary); margin-top:0.4rem;">Sterling movement against the dollar — key benchmark for international banking.</div>
+            <div class="click-hint">&#9656; Click to view 3, 6, 12 month trends</div>
+        </div>
+
+        <!-- GBP/PKR from exchange rate API -->
+        {% if exec_fx.get('GBP_PKR') and exec_fx.GBP_PKR.value %}
+        <div class="card accent-purple">
+            <div class="label">GBP / PKR</div>
+            <div class="value">{{ "%.2f"|format(exec_fx.GBP_PKR.value) }}</div>
+            <div class="date">Live | {{ exec_fx.GBP_PKR.source }}</div>
+            <div style="font-size:0.68rem; color:var(--text-secondary); margin-top:0.4rem;">Corridor stability supports consistent remittance flows.</div>
+        </div>
+        {% endif %}
+
+        <!-- Gold from exchange rate API -->
+        {% if exec_fx.get('USD_per_XAU') and exec_fx.USD_per_XAU.value %}
+        <div class="card accent-amber">
+            <div class="label">Gold (USD/oz)</div>
+            <div class="value">${{ "{:,.0f}".format(exec_fx.USD_per_XAU.value) }}</div>
+            <div class="date">Live | {{ exec_fx.USD_per_XAU.source }}</div>
+            <div style="font-size:0.68rem; color:var(--text-secondary); margin-top:0.4rem;">Safe-haven demand indicator — watch during geopolitical risk events.</div>
+        </div>
+        {% endif %}
+
+        <!-- Brent Oil from FRED -->
+        {% set brent = grouped.get('commodities', [])|selectattr('id', 'equalto', 'DCOILBRENTEU')|first %}
+        <div class="card accent-red" onclick="openHistory('DCOILBRENTEU', 'Brent Crude Oil')">
+            <div class="label">Brent Crude Oil</div>
+            {% if brent and brent.value is not none %}
+            <div class="value">${{ "%.2f"|format(brent.value) }}/bbl</div>
+            <div class="date">{{ brent.date }} | FRED</div>
+            {% else %}<div class="value na">N/A</div>{% endif %}
+            <div style="font-size:0.68rem; color:var(--text-secondary); margin-top:0.4rem;">Upside inflation risk — primary hurdle for further MPC rate cuts.</div>
+            <div class="click-hint">&#9656; Click to view 3, 6, 12 month trends</div>
+        </div>
+
+        <!-- SONIA -->
+        {% set sonia = grouped.get('uk_rates', [])|selectattr('id', 'equalto', 'IUDSOIA')|first %}
+        <div class="card accent-cyan" onclick="openHistory('IUDSOIA', 'SONIA')">
+            <div class="label">SONIA (Overnight)</div>
+            {% if sonia and sonia.value is not none %}
+            <div class="value">{{ "%.2f"|format(sonia.value) }}%</div>
+            {% else %}<div class="value na">N/A</div>{% endif %}
+            <div class="date">{{ sonia.date if sonia else '—' }} | FRED</div>
+            <div style="font-size:0.68rem; color:var(--text-secondary); margin-top:0.4rem;">Anchored to BoE Base Rate — stable floor for tracker products.</div>
+            <div class="click-hint">&#9656; Click to view 3, 6, 12 month trends</div>
+        </div>
+
+        <!-- UK 10Y Gilt -->
+        {% set gilt = grouped.get('uk_rates', [])|selectattr('id', 'equalto', 'IRLTLT01GBM156N')|first %}
+        <div class="card" onclick="openHistory('IRLTLT01GBM156N', 'UK 10Y Gilt')">
+            <div class="label">UK 10Y Gilt</div>
+            {% if gilt and gilt.value is not none %}
+            <div class="value">{{ "%.2f"|format(gilt.value) }}%</div>
+            {% else %}<div class="value na">N/A</div>{% endif %}
+            <div class="date">{{ gilt.date if gilt else '—' }} | FRED</div>
+            <div style="font-size:0.68rem; color:var(--text-secondary); margin-top:0.4rem;">Pricing in "higher for longer" fiscal environment.</div>
+            <div class="click-hint">&#9656; Click to view 3, 6, 12 month trends</div>
+        </div>
+    </div>
+    </div>
+
+    <!-- Calendar & Data Releases -->
+    <div class="expand-header" onclick="toggleExpand(this)">
+        <span class="eh-label">Calendar &amp; Upcoming Events</span>
+        <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+    </div>
+    <div class="expand-body">
+    <div class="news-feed" style="margin-top:0.75rem;">
+        {% for event in exec_calendar %}
+        <div class="news-item">
+            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.3rem;">
+                <span style="display:inline-block; background:rgba(6,182,212,0.12); color:var(--accent-cyan); font-size:0.65rem; font-weight:700; padding:0.2rem 0.5rem; border-radius:4px; font-variant-numeric:tabular-nums;">{{ event.date }}</span>
+            </div>
+            <div style="font-size:0.85rem; color:var(--text-primary); line-height:1.45;">{{ event.event }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    </div>
+
+    <!-- London BTL & Property Pulse -->
+    <div class="expand-header" onclick="toggleExpand(this)">
+        <span class="eh-label">London BTL &amp; Property Pulse</span>
+        <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+    </div>
+    <div class="expand-body">
+    <div class="table-wrap" style="border-radius:12px; border:1px solid var(--border); margin-top:0.75rem;">
+        <table>
+            <thead><tr><th>Metric</th><th>Value</th><th>Change</th><th>Note</th></tr></thead>
+            <tbody>
+                {% for item in exec_property %}
+                <tr>
+                    <td style="font-weight:600;">{{ item.metric }}</td>
+                    <td class="rate-value">{{ item.unit }}{{ item.value }}</td>
+                    <td><span style="font-size:0.78rem; color:{% if '-' in item.change %}var(--red){% elif '+' in item.change %}var(--green){% else %}var(--text-muted){% endif %};">{{ item.change or '—' }}</span></td>
+                    <td style="font-size:0.72rem; color:var(--text-secondary);">{{ item.note }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    </div>
+
+    <!-- Major Banking & M&A News -->
+    <div class="expand-header" onclick="toggleExpand(this)">
+        <span class="eh-label">Major Banking &amp; M&amp;A News</span>
+        <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+    </div>
+    <div class="expand-body">
+    <div class="news-feed" style="margin-top:0.75rem;">
+        {% for item in exec_banking_news %}
+        <div class="news-item">
+            <div style="font-size:0.85rem; color:var(--text-primary); line-height:1.45;">
+                <span style="color:var(--accent-cyan); font-weight:700; margin-right:0.4rem;">{{ loop.index }}.</span>{{ item }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    </div>
+
+    <!-- Regulatory & Strategic Lens -->
+    <div class="expand-header" onclick="toggleExpand(this)">
+        <span class="eh-label">Regulatory &amp; Strategic Lens</span>
+        <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+    </div>
+    <div class="expand-body">
+    <div class="news-feed" style="margin-top:0.75rem;">
+        {% for item in exec_regulatory %}
+        <div class="news-item">
+            <div style="font-size:0.85rem; color:var(--text-primary); line-height:1.45;">
+                <span style="color:var(--accent-purple); font-weight:700; margin-right:0.4rem;">{{ loop.index }}.</span>{{ item }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    </div>
+
+    <!-- Leadership Tip -->
+    <div class="expand-header" onclick="toggleExpand(this)">
+        <span class="eh-label">Leadership &amp; Effectiveness Tip</span>
+        <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+    </div>
+    <div class="expand-body">
+    <div style="margin-top:0.75rem; background:linear-gradient(135deg, rgba(6,182,212,0.08), rgba(139,92,246,0.06)); border:1px solid var(--border); border-left:3px solid var(--accent-cyan); border-radius:10px; padding:1.25rem;">
+        <div style="font-size:0.9rem; color:var(--text-primary); line-height:1.6; font-style:italic;">
+            "{{ exec_leadership_tip }}"
+        </div>
+    </div>
+    </div>
+
+</div><!-- /tab-brief -->
+
+<!-- ================================================================== -->
 <!-- TAB 1: RATES & MARKETS                                             -->
 <!-- ================================================================== -->
-<div class="tab-content active" id="tab-rates">
+<div class="tab-content" id="tab-rates">
 
     <!-- Central Bank Policy Rates — Multi-source cards -->
     <div class="expand-header" onclick="toggleExpand(this)">

@@ -87,6 +87,9 @@ SERIES = {
         "DPRIME":          "US Prime Rate",
         "MORTGAGE30US":    "US 30-Year Mortgage",
     },
+    "commodities": {
+        "DCOILBRENTEU":    "Brent Crude Oil ($/bbl)",
+    },
     "uk_rates": {
         "IUDSOIA":           "UK SONIA (Overnight)",
         "IRSTCI01GBM156N":   "UK Short-Term Rate (Monthly)",
@@ -224,16 +227,84 @@ UBL_SEARCH_QUERIES = [
 ]
 
 # ---------------------------------------------------------------------------
+# Executive Brief — structured intelligence sections
+# ---------------------------------------------------------------------------
+EXEC_BRIEF_MARKET_SERIES = {
+    "DCOILBRENTEU": {"label": "Brent Crude Oil", "unit": "$", "suffix": "/bbl", "decimals": 2},
+    "DEXUSUK":      {"label": "GBP / USD", "unit": "", "suffix": "", "decimals": 4},
+}
+
+# Calendar & upcoming events (manually maintained)
+EXEC_CALENDAR = [
+    {"date": "2026-04-06", "event": "FCA 'Targeted Support' gateway goes live; new suggestions model for retail financial decisions."},
+    {"date": "2026-04-09", "event": "Deadline for HM Treasury consultation on the Appointed Representatives (AR) regime."},
+    {"date": "2026-05-14", "event": "Next Bank of England Monetary Policy Report and rate decision."},
+    {"date": "2026-06-01", "event": "Katharine Braddick to formally succeed Sam Woods as PRA Chief Executive."},
+    {"date": "2026-07-15", "event": "FCA final rules for Buy Now Pay Later (BNPL) regulation take effect."},
+]
+
+# London BTL & Property data (manually updated)
+EXEC_PROPERTY = [
+    {"metric": "London House Price", "value": "508,400", "unit": "£", "change": "-0.5% MoM", "note": "6th consecutive annual fall at -1.7%"},
+    {"metric": "London Rent (New)", "value": "2,140", "unit": "£", "change": "+1.7% YoY", "note": "Rental growth slowing but still positive"},
+    {"metric": "BTL Incorporation", "value": "74%", "unit": "", "change": "", "note": "Of new purchases — driven by Section 24 tax friction"},
+    {"metric": "EPC 'C' Gap", "value": "42%", "unit": "", "change": "", "note": "Of London private rental stock — MEES compliance liability"},
+    {"metric": "ICR Stress Test", "value": "8.23%", "unit": "", "change": "", "note": "SONIA 3.73% + 4.5% stressed buffer for higher-rate taxpayers"},
+]
+
+# Regulatory & Strategic updates (manually maintained)
+EXEC_REGULATORY = [
+    "FCA published 2026 Regulatory Priorities — replacing portfolio letters with outcomes-focused sector reports for Mortgages.",
+    "FCA confirmed final rules for Buy Now Pay Later (BNPL) regulation, scheduled for implementation July 15, 2026.",
+    "HM Treasury proposed a new 'Permission for acting as a Principal,' curbing unregulated expansion of Appointed Representatives.",
+    "PRA issued a 'Limited Appetite' statement on capital requirement compromises, prioritizing sector resilience over aggressive growth.",
+    "Financial Ombudsman Service (FOS) scope expanded to allow direct complaints against Appointed Representatives, increasing Principal liability.",
+]
+
+# Major Banking & M&A News (manually maintained)
+EXEC_BANKING_NEWS = [
+    "Allegro Finance Limited completed a landmark securitised warehouse facility to establish a global media credit platform.",
+    "Arcus Infrastructure Partners acquired 100% of WCCTV, supported by a major UK lender consortium debt package.",
+    "Barclays strategic policy lead Katharine Braddick confirmed as next BoE Deputy Governor, signaling a shift in prudential supervision.",
+    "Charles Russell Speechlys reports a surge in mid-market M&A activity following £38bn of UK financial services deals in the prior year.",
+    "Travers Smith advised on a major real estate finance restructuring involving new 'contractual control' registers under the Levelling Up Act.",
+]
+
+# Leadership tip
+EXEC_LEADERSHIP_TIP = "Strategic Subtraction: Audit your lending policy for 'legacy criteria' that no longer contribute to risk-adjusted returns. If a rule hasn't caught a default in 24 months but slows down 20% of applications, remove it."
+
+
+def _fetch_exchange_rates() -> dict:
+    """Fetch GBP-based exchange rates from free API (GBP/PKR, Gold via XAU)."""
+    try:
+        resp = requests.get("https://open.er-api.com/v6/latest/GBP", timeout=15)
+        resp.raise_for_status()
+        data = resp.json()
+        rates = data.get("rates", {})
+        return {
+            "GBP_PKR": {"value": rates.get("PKR"), "label": "GBP / PKR", "source": "open.er-api.com"},
+            "GBP_USD": {"value": rates.get("USD"), "label": "GBP / USD", "source": "open.er-api.com"},
+            "GBP_EUR": {"value": rates.get("EUR"), "label": "GBP / EUR", "source": "open.er-api.com"},
+            "USD_per_XAU": {"value": round(1 / rates["XAU"], 2) if rates.get("XAU") else None, "label": "Gold (USD/oz)", "source": "open.er-api.com"},
+        }
+    except Exception as exc:
+        logger.warning("Failed to fetch exchange rates: %s", exc)
+        return {}
+
+
+# ---------------------------------------------------------------------------
 # Time-based cache (no APScheduler needed)
 # ---------------------------------------------------------------------------
 _cache: dict = {
     "rates": {},
     "news": {},
     "ubl_mentions": [],
+    "exec_fx": {},
     "last_updated": None,
     "news_last_updated": None,
     "rates_fetched_at": 0,
     "news_fetched_at": 0,
+    "exec_fx_fetched_at": 0,
 }
 _lock = Lock()
 
@@ -553,10 +624,17 @@ def dashboard():
     _ensure_rates()
     _ensure_news()
 
+    # Fetch executive brief FX data
+    now = time.time()
+    if now - _cache["exec_fx_fetched_at"] > RATES_CACHE_SECONDS or not _cache["exec_fx"]:
+        _cache["exec_fx"] = _fetch_exchange_rates()
+        _cache["exec_fx_fetched_at"] = now
+
     with _lock:
         rates = dict(_cache["rates"])
         news = dict(_cache["news"])
         ubl_mentions = list(_cache["ubl_mentions"])
+        exec_fx = dict(_cache["exec_fx"])
         last_updated = _cache["last_updated"]
         news_last_updated = _cache["news_last_updated"]
 
@@ -632,6 +710,12 @@ def dashboard():
         ubl_mentions=ubl_mentions,
         us_10y_value=rates.get("DGS10", {}).get("value"),
         bund_btp_spread=bund_btp_spread,
+        exec_fx=exec_fx,
+        exec_calendar=EXEC_CALENDAR,
+        exec_property=EXEC_PROPERTY,
+        exec_regulatory=EXEC_REGULATORY,
+        exec_banking_news=EXEC_BANKING_NEWS,
+        exec_leadership_tip=EXEC_LEADERSHIP_TIP,
         last_updated=last_updated,
         news_last_updated=news_last_updated,
     )
