@@ -525,19 +525,19 @@
 <!-- ================================================================== -->
 <div class="tab-content active" id="tab-brief">
 
-    <!-- AI Executive Summary -->
-    <div style="background:linear-gradient(135deg, rgba(6,182,212,0.08) 0%, rgba(139,92,246,0.06) 50%, rgba(59,130,246,0.05) 100%); border:1px solid var(--border); border-left:4px solid var(--accent-cyan); border-radius:12px; padding:1.25rem 1.5rem; margin-bottom:1.5rem;">
-        <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:1rem;">
-            <div style="width:28px; height:28px; background:linear-gradient(135deg,#06b6d4,#8b5cf6); border-radius:7px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                <span style="font-size:0.85rem;">🤖</span>
-            </div>
-            <div>
-                <div style="font-size:0.85rem; font-weight:700; color:var(--text-primary);">AI Intelligence Summary</div>
-                <div style="font-size:0.6rem; color:var(--text-muted);">Auto-generated from live data | {{ last_updated or 'pending' }}</div>
-            </div>
-        </div>
+    <!-- AI Executive Summary — collapsed by default -->
+    <div class="expand-header collapsed" onclick="toggleExpand(this)" style="background:linear-gradient(135deg, rgba(6,182,212,0.1) 0%, rgba(139,92,246,0.07) 100%); border-left:4px solid var(--accent-cyan); margin-top:0;">
+        <span class="eh-label" style="display:flex; align-items:center; gap:0.5rem;">
+            <span style="width:22px; height:22px; background:linear-gradient(135deg,#06b6d4,#8b5cf6); border-radius:6px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; font-size:0.7rem;">🤖</span>
+            AI Intelligence Summary
+            <span style="font-size:0.55rem; color:var(--text-muted); font-weight:400; text-transform:none; letter-spacing:normal;">— Auto-generated from live data</span>
+        </span>
+        <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+    </div>
+    <div class="expand-body collapsed">
+    <div style="background:linear-gradient(135deg, rgba(6,182,212,0.05) 0%, rgba(139,92,246,0.03) 100%); border:1px solid var(--border); border-top:none; border-radius:0 0 12px 12px; padding:1rem 1.25rem;">
         {% for item in ai_summary %}
-        <div style="display:flex; gap:0.6rem; padding:0.5rem 0; {% if not loop.last %}border-bottom:1px solid rgba(42,53,80,0.4);{% endif %}">
+        <div style="display:flex; gap:0.6rem; padding:0.45rem 0; {% if not loop.last %}border-bottom:1px solid rgba(42,53,80,0.4);{% endif %}">
             <span style="font-size:1rem; flex-shrink:0; width:1.5rem; text-align:center;">{{ item.icon }}</span>
             <div style="flex:1; min-width:0;">
                 <span style="font-size:0.6rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:{% if item.severity == 'alert' %}var(--red){% elif item.severity == 'warning' %}var(--yellow){% elif item.severity == 'positive' %}var(--green){% else %}var(--accent-cyan){% endif %}; margin-right:0.4rem;">{{ item.category }}</span>
@@ -545,6 +545,8 @@
             </div>
         </div>
         {% endfor %}
+        <div style="font-size:0.55rem; color:var(--text-muted); margin-top:0.5rem; text-align:right;">Last updated: {{ last_updated or 'pending' }}</div>
+    </div>
     </div>
 
     <!-- Market Snapshots -->
@@ -626,84 +628,142 @@
     </div>
     </div>
 
-    <!-- Calendar & Data Releases -->
+    <!-- London Property — LIVE from HM Land Registry -->
     <div class="expand-header" onclick="toggleExpand(this)">
-        <span class="eh-label">Calendar &amp; Upcoming Events</span>
+        <span class="eh-label">London Property Market (HM Land Registry — Live)</span>
         <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
     </div>
     <div class="expand-body">
-    <div class="news-feed" style="margin-top:0.75rem;">
-        {% for event in exec_calendar %}
-        <div class="news-item">
-            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.3rem;">
-                <span style="display:inline-block; background:rgba(6,182,212,0.12); color:var(--accent-cyan); font-size:0.65rem; font-weight:700; padding:0.2rem 0.5rem; border-radius:4px; font-variant-numeric:tabular-nums;">{{ event.date }}</span>
-            </div>
-            <div style="font-size:0.85rem; color:var(--text-primary); line-height:1.45;">{{ event.event }}</div>
-        </div>
-        {% endfor %}
-    </div>
-    </div>
-
-    <!-- London BTL & Property Pulse -->
-    <div class="expand-header" onclick="toggleExpand(this)">
-        <span class="eh-label">London BTL &amp; Property Pulse</span>
-        <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
-    </div>
-    <div class="expand-body">
+    {% if exec_property %}
     <div class="table-wrap" style="border-radius:12px; border:1px solid var(--border); margin-top:0.75rem;">
         <table>
-            <thead><tr><th>Metric</th><th>Value</th><th>Change</th><th>Note</th></tr></thead>
+            <thead><tr><th>Month</th><th>Avg Price</th><th>MoM</th><th>YoY</th></tr></thead>
             <tbody>
                 {% for item in exec_property %}
                 <tr>
-                    <td style="font-weight:600;">{{ item.metric }}</td>
-                    <td class="rate-value">{{ item.unit }}{{ item.value }}</td>
-                    <td><span style="font-size:0.78rem; color:{% if '-' in item.change %}var(--red){% elif '+' in item.change %}var(--green){% else %}var(--text-muted){% endif %};">{{ item.change or '—' }}</span></td>
-                    <td style="font-size:0.72rem; color:var(--text-secondary);">{{ item.note }}</td>
+                    <td style="font-weight:600;">{{ item.month }}</td>
+                    <td class="rate-value">£{{ "{:,.0f}".format(item.avgPrice) }}</td>
+                    <td><span style="font-size:0.78rem; color:{% if item.monthlyChange and item.monthlyChange|float < 0 %}var(--red){% elif item.monthlyChange and item.monthlyChange|float > 0 %}var(--green){% else %}var(--text-muted){% endif %};">{{ item.monthlyChange or '—' }}%</span></td>
+                    <td><span style="font-size:0.78rem; color:{% if item.annualChange and item.annualChange|float < 0 %}var(--red){% elif item.annualChange and item.annualChange|float > 0 %}var(--green){% else %}var(--text-muted){% endif %};">{{ item.annualChange or '—' }}%</span></td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+    {% if exec_ons_hpi %}
+    <div style="display:flex; gap:1rem; margin-top:0.75rem; flex-wrap:wrap;">
+        {% for name, data in exec_ons_hpi.items() %}
+        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:0.75rem 1rem; flex:1; min-width:200px;">
+            <div style="font-size:0.65rem; color:var(--text-muted); text-transform:uppercase;">{{ name }} Annual Change</div>
+            <div style="font-size:1.3rem; font-weight:700; color:{% if data.value|float > 0 %}var(--green){% else %}var(--red){% endif %};">{{ data.value }}%</div>
+            <div style="font-size:0.6rem; color:var(--text-muted);">{{ data.date }} | ONS</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="empty-state" style="margin-top:0.75rem;">Loading property data from Land Registry...</div>
+    {% endif %}
     </div>
 
-    <!-- Major Banking & M&A News -->
+    <!-- BoE Calendar & Events — LIVE from BoE RSS -->
     <div class="expand-header" onclick="toggleExpand(this)">
-        <span class="eh-label">Major Banking &amp; M&amp;A News</span>
+        <span class="eh-label">Bank of England Events &amp; Calendar (Live)</span>
         <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
     </div>
     <div class="expand-body">
     <div class="news-feed" style="margin-top:0.75rem;">
-        {% for item in exec_banking_news %}
-        <div class="news-item">
-            <div style="font-size:0.85rem; color:var(--text-primary); line-height:1.45;">
-                <span style="color:var(--accent-cyan); font-weight:700; margin-right:0.4rem;">{{ loop.index }}.</span>{{ item }}
+        {% if exec_boe_events %}
+            {% for item in exec_boe_events[:8] %}
+            <div class="news-item">
+                <div class="news-source">🏛️ Bank of England</div>
+                <div class="news-title"><a href="{{ item.link }}" target="_blank">{{ item.title }}</a></div>
+                {% if item.date %}<div class="news-date">{{ item.date }}</div>{% endif %}
             </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">Loading BoE events...</div>
+        {% endif %}
+    </div>
+    {% if exec_news.get('calendar') %}
+    <div style="margin-top:0.75rem; font-size:0.7rem; color:var(--accent-cyan); font-weight:600; text-transform:uppercase; letter-spacing:0.06em;">Related Financial Calendar News</div>
+    <div class="news-feed" style="margin-top:0.5rem;">
+        {% for item in exec_news.calendar[:5] %}
+        <div class="news-item">
+            <div class="news-title"><a href="{{ item.link }}" target="_blank">{{ item.title }}</a></div>
+            {% if item.date %}<div class="news-date">{{ item.date }}</div>{% endif %}
         </div>
         {% endfor %}
     </div>
+    {% endif %}
     </div>
 
-    <!-- Regulatory & Strategic Lens -->
+    <!-- Major Banking & M&A News — LIVE from Google News -->
     <div class="expand-header" onclick="toggleExpand(this)">
-        <span class="eh-label">Regulatory &amp; Strategic Lens</span>
+        <span class="eh-label">Major Banking &amp; M&amp;A News (Live)</span>
         <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
     </div>
     <div class="expand-body">
     <div class="news-feed" style="margin-top:0.75rem;">
-        {% for item in exec_regulatory %}
-        <div class="news-item">
-            <div style="font-size:0.85rem; color:var(--text-primary); line-height:1.45;">
-                <span style="color:var(--accent-purple); font-weight:700; margin-right:0.4rem;">{{ loop.index }}.</span>{{ item }}
+        {% if exec_news.get('banking_ma') %}
+            {% for item in exec_news.banking_ma %}
+            <div class="news-item">
+                <div class="news-title"><a href="{{ item.link }}" target="_blank">{{ item.title }}</a></div>
+                {% if item.summary %}<div class="news-summary">{{ item.summary }}</div>{% endif %}
+                {% if item.date %}<div class="news-date">{{ item.date }}</div>{% endif %}
             </div>
-        </div>
-        {% endfor %}
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">Loading banking & M&A news...</div>
+        {% endif %}
     </div>
     </div>
 
-    <!-- Leadership Tip -->
+    <!-- Regulatory & Strategic — LIVE from Google News -->
     <div class="expand-header" onclick="toggleExpand(this)">
-        <span class="eh-label">Leadership &amp; Effectiveness Tip</span>
+        <span class="eh-label">Regulatory &amp; Strategic Updates (Live)</span>
+        <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+    </div>
+    <div class="expand-body">
+    <div class="news-feed" style="margin-top:0.75rem;">
+        {% if exec_news.get('regulatory') %}
+            {% for item in exec_news.regulatory %}
+            <div class="news-item">
+                <div class="news-title"><a href="{{ item.link }}" target="_blank">{{ item.title }}</a></div>
+                {% if item.summary %}<div class="news-summary">{{ item.summary }}</div>{% endif %}
+                {% if item.date %}<div class="news-date">{{ item.date }}</div>{% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">Loading regulatory news...</div>
+        {% endif %}
+    </div>
+    </div>
+
+    <!-- London Property News — LIVE from Google News -->
+    <div class="expand-header" onclick="toggleExpand(this)">
+        <span class="eh-label">London Property News (Live)</span>
+        <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+    </div>
+    <div class="expand-body">
+    <div class="news-feed" style="margin-top:0.75rem;">
+        {% if exec_news.get('property') %}
+            {% for item in exec_news.property %}
+            <div class="news-item">
+                <div class="news-title"><a href="{{ item.link }}" target="_blank">{{ item.title }}</a></div>
+                {% if item.summary %}<div class="news-summary">{{ item.summary }}</div>{% endif %}
+                {% if item.date %}<div class="news-date">{{ item.date }}</div>{% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">Loading property news...</div>
+        {% endif %}
+    </div>
+    </div>
+
+    <!-- Leadership Tip — Rotating daily from pool of 15 -->
+    <div class="expand-header" onclick="toggleExpand(this)">
+        <span class="eh-label">Daily Leadership Insight</span>
         <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
     </div>
     <div class="expand-body">
@@ -711,6 +771,7 @@
         <div style="font-size:0.9rem; color:var(--text-primary); line-height:1.6; font-style:italic;">
             "{{ exec_leadership_tip }}"
         </div>
+        <div style="font-size:0.6rem; color:var(--text-muted); margin-top:0.5rem;">Rotates daily from a curated pool of executive insights.</div>
     </div>
     </div>
 

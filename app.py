@@ -234,44 +234,140 @@ EXEC_BRIEF_MARKET_SERIES = {
     "DEXUSUK":      {"label": "GBP / USD", "unit": "", "suffix": "", "decimals": 4},
 }
 
-# Calendar & upcoming events (manually maintained)
-EXEC_CALENDAR = [
-    {"date": "2026-04-06", "event": "FCA 'Targeted Support' gateway goes live; new suggestions model for retail financial decisions."},
-    {"date": "2026-04-09", "event": "Deadline for HM Treasury consultation on the Appointed Representatives (AR) regime."},
-    {"date": "2026-05-14", "event": "Next Bank of England Monetary Policy Report and rate decision."},
-    {"date": "2026-06-01", "event": "Katharine Braddick to formally succeed Sam Woods as PRA Chief Executive."},
-    {"date": "2026-07-15", "event": "FCA final rules for Buy Now Pay Later (BNPL) regulation take effect."},
+# Leadership tips — rotating pool (changes daily based on day of year)
+LEADERSHIP_TIPS = [
+    "Strategic Subtraction: Audit your lending policy for 'legacy criteria' that no longer contribute to risk-adjusted returns. If a rule hasn't caught a default in 24 months but slows down 20% of applications, remove it.",
+    "Decision Velocity: The cost of a delayed decision often exceeds the cost of a wrong one. Set a 48-hour rule for any decision that's reversible.",
+    "Margin Discipline: Revenue growth without margin expansion is just burning fuel faster. Every new product should pass the 'would I invest my own money?' test.",
+    "Talent Density: One exceptional performer creates more value than three average ones. Invest disproportionately in your top 10%.",
+    "Customer Friction Mapping: Walk through your customer onboarding process quarterly. Every unnecessary click, form field, or wait time is a silent revenue leak.",
+    "Risk Culture: The best risk management isn't about stopping things — it's about enabling the right things faster. Measure how quickly good deals get approved, not just how many bad ones you catch.",
+    "Data Over Intuition: If two executives disagree, ask 'what data would change your mind?' If neither can answer, the discussion isn't ready for a decision.",
+    "Regulatory Advantage: Don't just comply with regulation — find the competitive advantage in it. The bank that implements Consumer Duty best wins the market, not just the audit.",
+    "Communication Clarity: If your strategy can't be explained in three sentences to a branch manager, it's not a strategy — it's a wish list.",
+    "Operational Leverage: Every manual process is technical debt. Automate one workflow per quarter and reinvest the saved hours into customer-facing innovation.",
+    "Board Readiness: Before every board meeting, ask yourself: 'What's the one question I hope they don't ask?' — then prepare the answer.",
+    "Balance Sheet Thinking: Assets are easy to accumulate, hard to exit. For every acquisition, document the exit thesis on day one.",
+    "Stakeholder Mapping: Your regulators, auditors, and rating agencies are stakeholders too. A 15-minute quarterly call prevents a 15-day crisis response.",
+    "Cultural Capital: How your team behaves when you're not in the room is your actual culture. Measure it through 360 feedback, not town halls.",
+    "Strategic Patience: The best deals come to those who can walk away. Never let urgency override discipline — the market always gives you another chance.",
 ]
 
-# London BTL & Property data (manually updated)
-EXEC_PROPERTY = [
-    {"metric": "London House Price", "value": "508,400", "unit": "£", "change": "-0.5% MoM", "note": "6th consecutive annual fall at -1.7%"},
-    {"metric": "London Rent (New)", "value": "2,140", "unit": "£", "change": "+1.7% YoY", "note": "Rental growth slowing but still positive"},
-    {"metric": "BTL Incorporation", "value": "74%", "unit": "", "change": "", "note": "Of new purchases — driven by Section 24 tax friction"},
-    {"metric": "EPC 'C' Gap", "value": "42%", "unit": "", "change": "", "note": "Of London private rental stock — MEES compliance liability"},
-    {"metric": "ICR Stress Test", "value": "8.23%", "unit": "", "change": "", "note": "SONIA 3.73% + 4.5% stressed buffer for higher-rate taxpayers"},
-]
+# Google News RSS queries for live exec brief sections
+EXEC_NEWS_FEEDS = {
+    "banking_ma": {
+        "label": "Major Banking & M&A News",
+        "queries": [
+            "https://news.google.com/rss/search?q=UK+banking+M%26A+acquisition+deal&hl=en-GB&gl=GB&ceid=GB:en",
+            "https://news.google.com/rss/search?q=UK+bank+merger+finance+deal&hl=en-GB&gl=GB&ceid=GB:en",
+        ],
+        "max_items": 5,
+    },
+    "regulatory": {
+        "label": "Regulatory & Strategic Updates",
+        "queries": [
+            "https://news.google.com/rss/search?q=FCA+regulation+UK+banking+2026&hl=en-GB&gl=GB&ceid=GB:en",
+            "https://news.google.com/rss/search?q=PRA+%22Bank+of+England%22+prudential+regulation&hl=en-GB&gl=GB&ceid=GB:en",
+        ],
+        "max_items": 5,
+    },
+    "property": {
+        "label": "London Property & BTL News",
+        "queries": [
+            "https://news.google.com/rss/search?q=London+house+prices+property+market+BTL&hl=en-GB&gl=GB&ceid=GB:en",
+        ],
+        "max_items": 5,
+    },
+    "calendar": {
+        "label": "UK Financial Calendar & Events",
+        "queries": [
+            "https://news.google.com/rss/search?q=%22Bank+of+England%22+rate+decision+MPC+2026&hl=en-GB&gl=GB&ceid=GB:en",
+            "https://news.google.com/rss/search?q=FCA+deadline+consultation+UK+finance+2026&hl=en-GB&gl=GB&ceid=GB:en",
+        ],
+        "max_items": 5,
+    },
+}
 
-# Regulatory & Strategic updates (manually maintained)
-EXEC_REGULATORY = [
-    "FCA published 2026 Regulatory Priorities — replacing portfolio letters with outcomes-focused sector reports for Mortgages.",
-    "FCA confirmed final rules for Buy Now Pay Later (BNPL) regulation, scheduled for implementation July 15, 2026.",
-    "HM Treasury proposed a new 'Permission for acting as a Principal,' curbing unregulated expansion of Appointed Representatives.",
-    "PRA issued a 'Limited Appetite' statement on capital requirement compromises, prioritizing sector resilience over aggressive growth.",
-    "Financial Ombudsman Service (FOS) scope expanded to allow direct complaints against Appointed Representatives, increasing Principal liability.",
-]
 
-# Major Banking & M&A News (manually maintained)
-EXEC_BANKING_NEWS = [
-    "Allegro Finance Limited completed a landmark securitised warehouse facility to establish a global media credit platform.",
-    "Arcus Infrastructure Partners acquired 100% of WCCTV, supported by a major UK lender consortium debt package.",
-    "Barclays strategic policy lead Katharine Braddick confirmed as next BoE Deputy Governor, signaling a shift in prudential supervision.",
-    "Charles Russell Speechlys reports a surge in mid-market M&A activity following £38bn of UK financial services deals in the prior year.",
-    "Travers Smith advised on a major real estate finance restructuring involving new 'contractual control' registers under the Levelling Up Act.",
-]
+def _fetch_london_property() -> list[dict]:
+    """Fetch London property data from HM Land Registry SPARQL API."""
+    query = '''
+PREFIX ukhpi: <http://landregistry.data.gov.uk/def/ukhpi/>
+SELECT ?month ?avgPrice ?annualChange ?monthlyChange WHERE {
+  ?item ukhpi:refRegion <http://landregistry.data.gov.uk/id/region/london> ;
+        ukhpi:refMonth ?month ;
+        ukhpi:averagePrice ?avgPrice .
+  OPTIONAL { ?item ukhpi:percentageAnnualChange ?annualChange }
+  OPTIONAL { ?item ukhpi:percentageChange ?monthlyChange }
+} ORDER BY DESC(?month) LIMIT 6
+'''
+    try:
+        resp = requests.post(
+            "https://landregistry.data.gov.uk/landregistry/query",
+            data={"query": query},
+            timeout=15,
+            headers={"Accept": "application/sparql-results+json"},
+        )
+        resp.raise_for_status()
+        results = resp.json().get("results", {}).get("bindings", [])
+        data = []
+        for row in results:
+            data.append({
+                "month": row["month"]["value"],
+                "avgPrice": float(row["avgPrice"]["value"]),
+                "annualChange": row.get("annualChange", {}).get("value"),
+                "monthlyChange": row.get("monthlyChange", {}).get("value"),
+            })
+        return data
+    except Exception as exc:
+        logger.warning("Failed to fetch London property data: %s", exc)
+        return []
 
-# Leadership tip
-EXEC_LEADERSHIP_TIP = "Strategic Subtraction: Audit your lending policy for 'legacy criteria' that no longer contribute to risk-adjusted returns. If a rule hasn't caught a default in 24 months but slows down 20% of applications, remove it."
+
+def _fetch_ons_hpi() -> dict:
+    """Fetch UK and London HPI annual % change from ONS."""
+    result = {}
+    for code, name in [("l55o", "UK HPI"), ("l55p", "London HPI")]:
+        try:
+            url = f"https://www.ons.gov.uk/economy/inflationandpriceindices/timeseries/{code}/mm23/data"
+            resp = requests.get(url, timeout=15, headers={"User-Agent": "CEOMonitor/1.0"})
+            resp.raise_for_status()
+            months = resp.json().get("months", [])
+            if months:
+                latest = months[-1]
+                result[name] = {"date": latest["date"], "value": latest["value"]}
+        except Exception as exc:
+            logger.warning("Failed to fetch ONS %s: %s", code, exc)
+    return result
+
+
+def _fetch_boe_events() -> list[dict]:
+    """Fetch upcoming BoE events from their RSS feed."""
+    articles = _parse_rss("https://www.bankofengland.co.uk/rss/events", max_items=10)
+    return articles
+
+
+def _fetch_exec_news() -> dict:
+    """Fetch all executive brief news sections from Google News RSS."""
+    result = {}
+    for key, config in EXEC_NEWS_FEEDS.items():
+        items = []
+        seen = set()
+        for url in config["queries"]:
+            articles = _parse_rss(url, max_items=config["max_items"])
+            for a in articles:
+                title_hash = hashlib.md5(a["title"].encode()).hexdigest()
+                if title_hash not in seen:
+                    seen.add(title_hash)
+                    items.append(a)
+        result[key] = items[:config["max_items"]]
+    return result
+
+
+def _get_leadership_tip() -> str:
+    """Return a leadership tip that rotates daily."""
+    day_of_year = datetime.now(timezone.utc).timetuple().tm_yday
+    return LEADERSHIP_TIPS[day_of_year % len(LEADERSHIP_TIPS)]
 
 
 def _fetch_exchange_rates() -> dict:
@@ -300,11 +396,15 @@ _cache: dict = {
     "news": {},
     "ubl_mentions": [],
     "exec_fx": {},
+    "exec_property": [],
+    "exec_ons_hpi": {},
+    "exec_boe_events": [],
+    "exec_news": {},
     "last_updated": None,
     "news_last_updated": None,
     "rates_fetched_at": 0,
     "news_fetched_at": 0,
-    "exec_fx_fetched_at": 0,
+    "exec_fetched_at": 0,
 }
 _lock = Lock()
 
@@ -736,19 +836,7 @@ def _generate_executive_summary(rates: dict, exec_fx: dict, health: dict) -> lis
                 "severity": "info"
             })
 
-    # --- Upcoming Calendar ---
-    upcoming = []
-    now_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    for event in EXEC_CALENDAR:
-        if event["date"] >= now_date:
-            upcoming.append(event)
-    if upcoming:
-        next_event = upcoming[0]
-        summary.append({
-            "icon": "📅", "category": "Next Key Date",
-            "text": f"{next_event['date']}: {next_event['event']}",
-            "severity": "info"
-        })
+    # --- Upcoming Calendar (removed — now live from BoE RSS) ---
 
     # --- Mortgage Rate Indicator ---
     mortgage = rates.get("MORTGAGE30US", {}).get("value")
@@ -804,17 +892,25 @@ def dashboard():
     _ensure_rates()
     _ensure_news()
 
-    # Fetch executive brief FX data
+    # Fetch executive brief data (FX, property, events, news sections)
     now = time.time()
-    if now - _cache["exec_fx_fetched_at"] > RATES_CACHE_SECONDS or not _cache["exec_fx"]:
+    if now - _cache["exec_fetched_at"] > RATES_CACHE_SECONDS or not _cache["exec_fx"]:
         _cache["exec_fx"] = _fetch_exchange_rates()
-        _cache["exec_fx_fetched_at"] = now
+        _cache["exec_property"] = _fetch_london_property()
+        _cache["exec_ons_hpi"] = _fetch_ons_hpi()
+        _cache["exec_boe_events"] = _fetch_boe_events()
+        _cache["exec_news"] = _fetch_exec_news()
+        _cache["exec_fetched_at"] = now
 
     with _lock:
         rates = dict(_cache["rates"])
         news = dict(_cache["news"])
         ubl_mentions = list(_cache["ubl_mentions"])
         exec_fx = dict(_cache["exec_fx"])
+        exec_property = list(_cache["exec_property"])
+        exec_ons_hpi = dict(_cache["exec_ons_hpi"])
+        exec_boe_events = list(_cache["exec_boe_events"])
+        exec_news = dict(_cache["exec_news"])
         last_updated = _cache["last_updated"]
         news_last_updated = _cache["news_last_updated"]
 
@@ -895,11 +991,11 @@ def dashboard():
         bund_btp_spread=bund_btp_spread,
         ai_summary=ai_summary,
         exec_fx=exec_fx,
-        exec_calendar=EXEC_CALENDAR,
-        exec_property=EXEC_PROPERTY,
-        exec_regulatory=EXEC_REGULATORY,
-        exec_banking_news=EXEC_BANKING_NEWS,
-        exec_leadership_tip=EXEC_LEADERSHIP_TIP,
+        exec_property=exec_property,
+        exec_ons_hpi=exec_ons_hpi,
+        exec_boe_events=exec_boe_events,
+        exec_news=exec_news,
+        exec_leadership_tip=_get_leadership_tip(),
         last_updated=last_updated,
         news_last_updated=news_last_updated,
     )
