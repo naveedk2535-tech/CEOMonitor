@@ -525,6 +525,28 @@
 <!-- ================================================================== -->
 <div class="tab-content active" id="tab-brief">
 
+    <!-- AI Executive Summary -->
+    <div style="background:linear-gradient(135deg, rgba(6,182,212,0.08) 0%, rgba(139,92,246,0.06) 50%, rgba(59,130,246,0.05) 100%); border:1px solid var(--border); border-left:4px solid var(--accent-cyan); border-radius:12px; padding:1.25rem 1.5rem; margin-bottom:1.5rem;">
+        <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:1rem;">
+            <div style="width:28px; height:28px; background:linear-gradient(135deg,#06b6d4,#8b5cf6); border-radius:7px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <span style="font-size:0.85rem;">🤖</span>
+            </div>
+            <div>
+                <div style="font-size:0.85rem; font-weight:700; color:var(--text-primary);">AI Intelligence Summary</div>
+                <div style="font-size:0.6rem; color:var(--text-muted);">Auto-generated from live data | {{ last_updated or 'pending' }}</div>
+            </div>
+        </div>
+        {% for item in ai_summary %}
+        <div style="display:flex; gap:0.6rem; padding:0.5rem 0; {% if not loop.last %}border-bottom:1px solid rgba(42,53,80,0.4);{% endif %}">
+            <span style="font-size:1rem; flex-shrink:0; width:1.5rem; text-align:center;">{{ item.icon }}</span>
+            <div style="flex:1; min-width:0;">
+                <span style="font-size:0.6rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:{% if item.severity == 'alert' %}var(--red){% elif item.severity == 'warning' %}var(--yellow){% elif item.severity == 'positive' %}var(--green){% else %}var(--accent-cyan){% endif %}; margin-right:0.4rem;">{{ item.category }}</span>
+                <span style="font-size:0.78rem; color:var(--text-primary); line-height:1.5;">{{ item.text }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
     <!-- Market Snapshots -->
     <div class="expand-header" onclick="toggleExpand(this)">
         <span class="eh-label">Market Snapshots</span>

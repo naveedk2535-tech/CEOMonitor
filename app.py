@@ -583,6 +583,186 @@ def _ensure_news():
 
 
 # ---------------------------------------------------------------------------
+# AI Executive Summary Generator
+# ---------------------------------------------------------------------------
+def _generate_executive_summary(rates: dict, exec_fx: dict, health: dict) -> list[dict]:
+    """Analyze all data and generate executive summary bullet points.
+    Each item: {icon, category, text, severity: 'info'|'positive'|'warning'|'alert'}
+    """
+    summary = []
+    today = datetime.now(timezone.utc).strftime("%A, %B %d, %Y")
+
+    # --- Monetary Policy Stance ---
+    fed_upper = rates.get("DFEDTARU", {}).get("value")
+    fed_lower = rates.get("DFEDTARL", {}).get("value")
+    ecb_dfr = rates.get("ECB_DFR", {}).get("value")
+    sonia = rates.get("IUDSOIA", {}).get("value")
+
+    if fed_upper is not None and fed_lower is not None:
+        summary.append({
+            "icon": "🏛️", "category": "Fed Policy",
+            "text": f"Federal Reserve target range holds at {fed_lower:.2f}%–{fed_upper:.2f}%. "
+                    f"{'Markets pricing in potential cuts.' if fed_upper <= 4.0 else 'Elevated rates signal continued tightening bias.'}",
+            "severity": "info"
+        })
+
+    if ecb_dfr is not None:
+        summary.append({
+            "icon": "🇪🇺", "category": "ECB",
+            "text": f"ECB deposit facility rate at {ecb_dfr:.2f}%. "
+                    f"{'Accommodative stance — watch for further easing signals.' if ecb_dfr < 2.5 else 'Restrictive territory — monitoring inflation trajectory.'}",
+            "severity": "info"
+        })
+
+    if sonia is not None:
+        boe_approx = round(sonia * 4) / 4  # Round to nearest 0.25
+        summary.append({
+            "icon": "🇬🇧", "category": "Bank of England",
+            "text": f"SONIA at {sonia:.2f}%, implying BoE Base Rate near {boe_approx:.2f}%. "
+                    f"{'Rate-sensitive mortgage products remain under pressure.' if sonia > 4.0 else 'Rate environment stabilizing — positive for lending margins.'}",
+            "severity": "info"
+        })
+
+    # --- Yield Curve Health ---
+    spread_2s10s = rates.get("T10Y2Y", {}).get("value")
+    if spread_2s10s is not None:
+        if spread_2s10s < 0:
+            summary.append({
+                "icon": "⚠️", "category": "Yield Curve",
+                "text": f"ALERT: Yield curve inverted at {spread_2s10s:.2f}%. Historically signals recession risk within 12–18 months. Review credit exposure.",
+                "severity": "alert"
+            })
+        elif spread_2s10s < 0.25:
+            summary.append({
+                "icon": "🔶", "category": "Yield Curve",
+                "text": f"Yield curve nearly flat at {spread_2s10s:.2f}%. Monitor for potential inversion — tighten risk appetite on longer-duration lending.",
+                "severity": "warning"
+            })
+        else:
+            summary.append({
+                "icon": "✅", "category": "Yield Curve",
+                "text": f"Yield curve positive at {spread_2s10s:.2f}%. Normal shape supports traditional banking margins.",
+                "severity": "positive"
+            })
+
+    # --- Credit Stress ---
+    hy_spread = rates.get("BAMLH0A0HYM2", {}).get("value")
+    if hy_spread is not None:
+        if hy_spread > 5:
+            summary.append({
+                "icon": "🚨", "category": "Credit Markets",
+                "text": f"High-yield spread at {hy_spread:.2f}% — elevated stress. Corporate default risk rising. Review counterparty exposures.",
+                "severity": "alert"
+            })
+        elif hy_spread > 4:
+            summary.append({
+                "icon": "🔶", "category": "Credit Markets",
+                "text": f"High-yield spread at {hy_spread:.2f}% — moderate stress. Credit conditions tightening.",
+                "severity": "warning"
+            })
+        else:
+            summary.append({
+                "icon": "✅", "category": "Credit Markets",
+                "text": f"High-yield spread at {hy_spread:.2f}% — benign conditions. Credit markets calm.",
+                "severity": "positive"
+            })
+
+    # --- Oil & Inflation ---
+    brent = rates.get("DCOILBRENTEU", {}).get("value")
+    if brent is not None:
+        if brent > 100:
+            summary.append({
+                "icon": "🛢️", "category": "Energy & Inflation",
+                "text": f"Brent crude at ${brent:.2f}/bbl — elevated. Energy-driven inflation pressure remains a headwind for rate cuts.",
+                "severity": "warning"
+            })
+        elif brent > 80:
+            summary.append({
+                "icon": "🛢️", "category": "Energy",
+                "text": f"Brent crude at ${brent:.2f}/bbl — stable range. Limited inflation pass-through expected.",
+                "severity": "info"
+            })
+        else:
+            summary.append({
+                "icon": "🛢️", "category": "Energy",
+                "text": f"Brent crude at ${brent:.2f}/bbl — supportive of disinflation narrative.",
+                "severity": "positive"
+            })
+
+    # --- Sterling ---
+    gbpusd = rates.get("DEXUSUK", {}).get("value")
+    gbp_pkr = exec_fx.get("GBP_PKR", {}).get("value") if exec_fx else None
+
+    if gbpusd is not None:
+        if gbpusd > 1.35:
+            sev = "positive"
+            note = "Strong sterling — favourable for UK importers and overseas asset holders."
+        elif gbpusd < 1.25:
+            sev = "warning"
+            note = "Weak sterling — increases import costs and inflation risk."
+        else:
+            sev = "info"
+            note = "Sterling trading in normal range."
+        summary.append({"icon": "💱", "category": "FX", "text": f"GBP/USD at {gbpusd:.4f}. {note}", "severity": sev})
+
+    if gbp_pkr is not None:
+        summary.append({
+            "icon": "💱", "category": "Remittance Corridor",
+            "text": f"GBP/PKR at {gbp_pkr:.2f} — {'stable corridor supports remittance flows.' if gbp_pkr > 350 else 'monitor for corridor pressure.'}",
+            "severity": "info"
+        })
+
+    # --- Gold ---
+    gold = exec_fx.get("USD_per_XAU", {}).get("value") if exec_fx else None
+    if gold is not None:
+        if gold > 2500:
+            summary.append({"icon": "🥇", "category": "Safe Haven", "text": f"Gold at ${gold:,.0f}/oz — strong safe-haven demand. Risk-off sentiment elevated.", "severity": "warning"})
+        elif gold > 2000:
+            summary.append({"icon": "🥇", "category": "Safe Haven", "text": f"Gold at ${gold:,.0f}/oz — elevated but stable. Uncertainty premium persists.", "severity": "info"})
+
+    # --- UK Gilt ---
+    gilt_10y = rates.get("IRLTLT01GBM156N", {}).get("value")
+    if gilt_10y is not None:
+        if gilt_10y > 4.5:
+            summary.append({
+                "icon": "🇬🇧", "category": "UK Gilts",
+                "text": f"UK 10Y Gilt yield at {gilt_10y:.2f}% — approaching 5%. 'Higher for longer' fiscal environment pressuring fixed-rate mortgage pricing.",
+                "severity": "warning"
+            })
+        else:
+            summary.append({
+                "icon": "🇬🇧", "category": "UK Gilts",
+                "text": f"UK 10Y Gilt yield at {gilt_10y:.2f}% — manageable range for mortgage-backed products.",
+                "severity": "info"
+            })
+
+    # --- Upcoming Calendar ---
+    upcoming = []
+    now_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    for event in EXEC_CALENDAR:
+        if event["date"] >= now_date:
+            upcoming.append(event)
+    if upcoming:
+        next_event = upcoming[0]
+        summary.append({
+            "icon": "📅", "category": "Next Key Date",
+            "text": f"{next_event['date']}: {next_event['event']}",
+            "severity": "info"
+        })
+
+    # --- Mortgage Rate Indicator ---
+    mortgage = rates.get("MORTGAGE30US", {}).get("value")
+    if mortgage is not None:
+        summary.append({
+            "icon": "🏠", "category": "US Mortgage",
+            "text": f"US 30Y mortgage rate at {mortgage:.2f}%. {'Affordability under strain.' if mortgage > 7 else 'Relatively stable for borrowers.'}",
+            "severity": "warning" if mortgage > 7 else "info"
+        })
+
+    return summary
+
+
+# ---------------------------------------------------------------------------
 # Auth decorator
 # ---------------------------------------------------------------------------
 def login_required(f):
@@ -699,6 +879,9 @@ def dashboard():
     else:
         bund_btp_spread = None
 
+    # Generate AI executive summary
+    ai_summary = _generate_executive_summary(rates, exec_fx, health)
+
     return render_template(
         "dashboard.html",
         grouped=grouped,
@@ -710,6 +893,7 @@ def dashboard():
         ubl_mentions=ubl_mentions,
         us_10y_value=rates.get("DGS10", {}).get("value"),
         bund_btp_spread=bund_btp_spread,
+        ai_summary=ai_summary,
         exec_fx=exec_fx,
         exec_calendar=EXEC_CALENDAR,
         exec_property=EXEC_PROPERTY,
