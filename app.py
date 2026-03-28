@@ -205,8 +205,7 @@ NEWS_FEEDS = {
     "central_banking": [
         {"name": "Google News — UK Banking Regulation", "url": "https://news.google.com/rss/search?q=UK+bank+regulation+FCA+PRA+%22Bank+of+England%22&hl=en-GB&gl=GB&ceid=GB:en", "icon": "⚖️"},
         {"name": "Google News — UK Banking News", "url": "https://news.google.com/rss/search?q=UK+banking+sector+high+street+banks&hl=en-GB&gl=GB&ceid=GB:en", "icon": "🏦"},
-        {"name": "Bank of England — News", "url": "https://www.bankofengland.co.uk/rss/news", "icon": "🏛️"},
-        {"name": "FCA — News", "url": "https://www.fca.org.uk/news/rss.xml", "icon": "⚖️"},
+        {"name": "Google News — BoE Speeches", "url": "https://news.google.com/rss/search?q=%22Bank+of+England%22+speech+OR+announcement+OR+policy&hl=en-GB&gl=GB&ceid=GB:en", "icon": "🏛️"},
     ],
     "global_markets": [
         {"name": "Google News — Global Markets", "url": "https://news.google.com/rss/search?q=global+markets+stocks+bonds+finance&hl=en-GB&gl=GB&ceid=GB:en", "icon": "🌍"},
@@ -342,8 +341,17 @@ def _fetch_ons_hpi() -> dict:
 
 
 def _fetch_boe_events() -> list[dict]:
-    """Fetch upcoming BoE events from their RSS feed."""
+    """Fetch BoE events — try official RSS first, fallback to Google News."""
     articles = _parse_rss("https://www.bankofengland.co.uk/rss/events", max_items=10)
+    if not articles:
+        # Fallback: Google News for BoE events and calendar
+        articles = _parse_rss(
+            "https://news.google.com/rss/search?q=%22Bank+of+England%22+event+OR+meeting+OR+speech+OR+decision&hl=en-GB&gl=GB&ceid=GB:en",
+            max_items=10,
+        )
+        for a in articles:
+            a["source"] = "Google News"
+            a["icon"] = "🏛️"
     return articles
 
 
