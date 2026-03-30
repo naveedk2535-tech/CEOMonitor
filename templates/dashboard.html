@@ -513,7 +513,7 @@
     <div class="nav-tab" data-tab="us">US Markets</div>
     <div class="nav-tab" data-tab="uk">UK Markets</div>
     <div class="nav-tab" data-tab="global">Global Markets</div>
-    <div class="nav-tab" data-tab="ubl">UBL UK Monitor</div>
+    <!-- <div class="nav-tab" data-tab="ubl">UBL UK Monitor</div> -->
     <div class="nav-tab" data-tab="links">Quick Links</div>
 </nav>
 
@@ -524,12 +524,11 @@
 <!-- ================================================================== -->
 <div class="tab-content active" id="tab-brief">
 
-    <!-- AI Executive Summary — collapsed by default -->
+    <!-- AI Summary — collapsed -->
     <div class="expand-header collapsed" onclick="toggleExpand(this)" style="background:linear-gradient(135deg, rgba(6,182,212,0.1) 0%, rgba(139,92,246,0.07) 100%); border-left:4px solid var(--accent-cyan); margin-top:0;">
         <span class="eh-label" style="display:flex; align-items:center; gap:0.5rem;">
             <span style="width:22px; height:22px; background:linear-gradient(135deg,#06b6d4,#8b5cf6); border-radius:6px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; font-size:0.7rem;">🤖</span>
             AI Intelligence Summary
-            <span style="font-size:0.55rem; color:var(--text-muted); font-weight:400; text-transform:none; letter-spacing:normal;">— Auto-generated from live data</span>
         </span>
         <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
     </div>
@@ -548,230 +547,333 @@
     </div>
     </div>
 
-    <!-- Market Snapshots -->
-    <div class="expand-header" onclick="toggleExpand(this)">
-        <span class="eh-label">Market Snapshots</span>
-        <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+    <!-- Regional sub-tabs -->
+    <div class="news-subtabs" style="margin-top:1rem;">
+        <div class="news-subtab active" data-brieftab="us" onclick="switchBriefTab('us')">🇺🇸 US Brief</div>
+        <div class="news-subtab" data-brieftab="uk" onclick="switchBriefTab('uk')">🇬🇧 UK Brief</div>
+        <div class="news-subtab" data-brieftab="global" onclick="switchBriefTab('global')">🌍 Global Brief</div>
     </div>
-    <div class="expand-body">
-    <div class="card-grid card-grid-wide" style="margin-top:0.75rem;">
-        <!-- GBP/USD from FRED -->
-        {% set gbpusd = grouped.get('fx_rates', [])|selectattr('id', 'equalto', 'DEXUSUK')|first %}
-        <div class="card accent-amber" onclick="openHistory('DEXUSUK', 'GBP/USD')">
-            <div class="label">GBP / USD</div>
-            {% if gbpusd and gbpusd.value is not none %}
-            <div class="value">{{ "%.4f"|format(gbpusd.value) }}
-                {% if gbpusd.direction == 'up' %}<span class="arrow up">&#9650;</span>{% elif gbpusd.direction == 'down' %}<span class="arrow down">&#9660;</span>{% endif %}
+
+    <!-- ==================== US BRIEF ==================== -->
+    <div class="news-panel active" id="briefpanel-us">
+
+        <div class="expand-header" onclick="toggleExpand(this)">
+            <span class="eh-label">🇺🇸 US Key Rates</span>
+            <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+        </div>
+        <div class="expand-body">
+        <div class="card-grid card-grid-wide" style="margin-top:0.75rem;">
+            {% for item in grouped.get('us_rates', []) %}
+            <div class="card" onclick="openHistory('{{ item.id }}', '{{ item.label }}')">
+                <div class="label">{{ item.label }}</div>
+                {% if item.value is not none %}<div class="value">{{ "%.2f"|format(item.value) }}%
+                    {% if item.direction == 'up' %}<span class="arrow up">&#9650;</span>{% elif item.direction == 'down' %}<span class="arrow down">&#9660;</span>{% endif %}
+                </div>{% else %}<div class="value na">N/A</div>{% endif %}
+                <div class="date">{{ item.date or '—' }}</div>
+                {% if item.id == 'T10Y2Y' and item.value is not none and item.value < 0 %}<div class="inversion-flag">&#9888; Yield Curve Inverted</div>{% endif %}
+                <div class="click-hint">&#9656; Click to view 3, 6, 12 month trends</div>
             </div>
-            {% else %}<div class="value na">N/A</div>{% endif %}
-            <div class="date">{{ gbpusd.date if gbpusd else '—' }} | FRED</div>
-            <div style="font-size:0.68rem; color:var(--text-secondary); margin-top:0.4rem;">Sterling movement against the dollar — key benchmark for international banking.</div>
-            <div class="click-hint">&#9656; Click to view 3, 6, 12 month trends</div>
+            {% endfor %}
+        </div>
         </div>
 
-        <!-- GBP/PKR from exchange rate API -->
-        {% if exec_fx.get('GBP_PKR') and exec_fx.GBP_PKR.value %}
-        <div class="card accent-purple">
-            <div class="label">GBP / PKR</div>
-            <div class="value">{{ "%.2f"|format(exec_fx.GBP_PKR.value) }}</div>
-            <div class="date">Live | {{ exec_fx.GBP_PKR.source }}</div>
-            <div style="font-size:0.68rem; color:var(--text-secondary); margin-top:0.4rem;">Corridor stability supports consistent remittance flows.</div>
+        <div class="expand-header" onclick="toggleExpand(this)">
+            <span class="eh-label">🇺🇸 US Macro &amp; Equity Indicators</span>
+            <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+        </div>
+        <div class="expand-body">
+        <div class="card-grid" style="margin-top:0.75rem;">
+            {% for item in grouped.get('us_macro', []) %}
+            <div class="card{% if 'S&P' in item.label or 'NASDAQ' in item.label %} accent-green{% elif 'CPI' in item.label or 'Inflation' in item.label %} accent-red{% endif %}" onclick="openHistory('{{ item.id }}', '{{ item.label }}')">
+                <div class="label">{{ item.label }}</div>
+                {% if item.value is not none %}<div class="value">{{ "%.2f"|format(item.value) }}
+                    {% if item.direction == 'up' %}<span class="arrow up">&#9650;</span>{% elif item.direction == 'down' %}<span class="arrow down">&#9660;</span>{% endif %}
+                </div>{% else %}<div class="value na">N/A</div>{% endif %}
+                <div class="date">{{ item.date or '—' }}</div>
+                <div class="click-hint">&#9656; Click to view 3, 6, 12 month trends</div>
+            </div>
+            {% endfor %}
+        </div>
+        </div>
+
+        <div class="expand-header" onclick="toggleExpand(this)">
+            <span class="eh-label">🇺🇸 US Property Market</span>
+            <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+        </div>
+        <div class="expand-body">
+        <div class="card-grid" style="margin-top:0.75rem;">
+            {% for item in grouped.get('us_property', []) %}
+            <div class="card accent-amber" onclick="openHistory('{{ item.id }}', '{{ item.label }}')">
+                <div class="label">{{ item.label }}</div>
+                {% if item.value is not none %}<div class="value">{{ "{:,.0f}".format(item.value) if item.value > 1000 else "%.2f"|format(item.value) }}
+                    {% if item.direction == 'up' %}<span class="arrow up">&#9650;</span>{% elif item.direction == 'down' %}<span class="arrow down">&#9660;</span>{% endif %}
+                </div>{% else %}<div class="value na">N/A</div>{% endif %}
+                <div class="date">{{ item.date or '—' }}</div>
+                <div class="click-hint">&#9656; Click to view 3, 6, 12 month trends</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% if exec_news.get('us_property') %}
+        <div style="margin-top:0.75rem; font-size:0.7rem; color:var(--accent-cyan); font-weight:600; text-transform:uppercase; letter-spacing:0.06em; padding-bottom:0.4rem; border-bottom:1px solid var(--border);">US Property News</div>
+        <div class="news-feed">
+            {% for item in exec_news.us_property[:5] %}
+            <div class="news-item">
+                <div class="news-title"><a href="{{ item.link }}" target="_blank">{{ item.title }}</a></div>
+                {% if item.summary %}<div class="news-summary">{{ item.summary }}</div>{% endif %}
+                {% if item.date %}<div class="news-date">{{ item.date }}</div>{% endif %}
+            </div>
+            {% endfor %}
         </div>
         {% endif %}
-
-        <!-- Gold from exchange rate API -->
-        {% if exec_fx.get('USD_per_XAU') and exec_fx.USD_per_XAU.value %}
-        <div class="card accent-amber">
-            <div class="label">Gold (USD/oz)</div>
-            <div class="value">${{ "{:,.0f}".format(exec_fx.USD_per_XAU.value) }}</div>
-            <div class="date">Live | {{ exec_fx.USD_per_XAU.source }}</div>
-            <div style="font-size:0.68rem; color:var(--text-secondary); margin-top:0.4rem;">Safe-haven demand indicator — watch during geopolitical risk events.</div>
-        </div>
-        {% endif %}
-
-        <!-- Brent Oil from FRED -->
-        {% set brent = grouped.get('commodities', [])|selectattr('id', 'equalto', 'DCOILBRENTEU')|first %}
-        <div class="card accent-red" onclick="openHistory('DCOILBRENTEU', 'Brent Crude Oil')">
-            <div class="label">Brent Crude Oil</div>
-            {% if brent and brent.value is not none %}
-            <div class="value">${{ "%.2f"|format(brent.value) }}/bbl</div>
-            <div class="date">{{ brent.date }} | FRED</div>
-            {% else %}<div class="value na">N/A</div>{% endif %}
-            <div style="font-size:0.68rem; color:var(--text-secondary); margin-top:0.4rem;">Upside inflation risk — primary hurdle for further MPC rate cuts.</div>
-            <div class="click-hint">&#9656; Click to view 3, 6, 12 month trends</div>
         </div>
 
-        <!-- SONIA -->
-        {% set sonia = grouped.get('uk_rates', [])|selectattr('id', 'equalto', 'IUDSOIA')|first %}
-        <div class="card accent-cyan" onclick="openHistory('IUDSOIA', 'SONIA')">
-            <div class="label">SONIA (Overnight)</div>
-            {% if sonia and sonia.value is not none %}
-            <div class="value">{{ "%.2f"|format(sonia.value) }}%</div>
-            {% else %}<div class="value na">N/A</div>{% endif %}
-            <div class="date">{{ sonia.date if sonia else '—' }} | FRED</div>
-            <div style="font-size:0.68rem; color:var(--text-secondary); margin-top:0.4rem;">Anchored to BoE Base Rate — stable floor for tracker products.</div>
-            <div class="click-hint">&#9656; Click to view 3, 6, 12 month trends</div>
+        <div class="expand-header" onclick="toggleExpand(this)">
+            <span class="eh-label">🇺🇸 US Finance News</span>
+            <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
         </div>
-
-        <!-- UK 10Y Gilt -->
-        {% set gilt = grouped.get('uk_rates', [])|selectattr('id', 'equalto', 'IRLTLT01GBM156N')|first %}
-        <div class="card" onclick="openHistory('IRLTLT01GBM156N', 'UK 10Y Gilt')">
-            <div class="label">UK 10Y Gilt</div>
-            {% if gilt and gilt.value is not none %}
-            <div class="value">{{ "%.2f"|format(gilt.value) }}%</div>
-            {% else %}<div class="value na">N/A</div>{% endif %}
-            <div class="date">{{ gilt.date if gilt else '—' }} | FRED</div>
-            <div style="font-size:0.68rem; color:var(--text-secondary); margin-top:0.4rem;">Pricing in "higher for longer" fiscal environment.</div>
-            <div class="click-hint">&#9656; Click to view 3, 6, 12 month trends</div>
-        </div>
-    </div>
-    </div>
-
-    <!-- London Property — LIVE from HM Land Registry -->
-    <div class="expand-header" onclick="toggleExpand(this)">
-        <span class="eh-label">London Property Market (HM Land Registry — Live)</span>
-        <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
-    </div>
-    <div class="expand-body">
-    {% if exec_property %}
-    <div class="table-wrap" style="border-radius:12px; border:1px solid var(--border); margin-top:0.75rem;">
-        <table>
-            <thead><tr><th>Month</th><th>Avg Price</th><th>MoM</th><th>YoY</th></tr></thead>
-            <tbody>
-                {% for item in exec_property %}
-                <tr>
-                    <td style="font-weight:600;">{{ item.month }}</td>
-                    <td class="rate-value">£{{ "{:,.0f}".format(item.avgPrice) }}</td>
-                    <td><span style="font-size:0.78rem; color:{% if item.monthlyChange and item.monthlyChange|float < 0 %}var(--red){% elif item.monthlyChange and item.monthlyChange|float > 0 %}var(--green){% else %}var(--text-muted){% endif %};">{{ item.monthlyChange or '—' }}%</span></td>
-                    <td><span style="font-size:0.78rem; color:{% if item.annualChange and item.annualChange|float < 0 %}var(--red){% elif item.annualChange and item.annualChange|float > 0 %}var(--green){% else %}var(--text-muted){% endif %};">{{ item.annualChange or '—' }}%</span></td>
-                </tr>
+        <div class="expand-body">
+        <div class="news-feed" style="margin-top:0.75rem;">
+            {% if news.get('us_finance') %}
+                {% for item in news.us_finance[:8] %}
+                <div class="news-item">
+                    <div class="news-source">{{ item.icon }} {{ item.source }}</div>
+                    <div class="news-title"><a href="{{ item.link }}" target="_blank">{{ item.title }}</a></div>
+                    {% if item.summary %}<div class="news-summary">{{ item.summary }}</div>{% endif %}
+                    {% if item.date %}<div class="news-date">{{ item.date }}</div>{% endif %}
+                </div>
                 {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% if exec_ons_hpi %}
-    <div style="display:flex; gap:1rem; margin-top:0.75rem; flex-wrap:wrap;">
-        {% for name, data in exec_ons_hpi.items() %}
-        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:0.75rem 1rem; flex:1; min-width:200px;">
-            <div style="font-size:0.65rem; color:var(--text-muted); text-transform:uppercase;">{{ name }} Annual Change</div>
-            <div style="font-size:1.3rem; font-weight:700; color:{% if data.value|float > 0 %}var(--green){% else %}var(--red){% endif %};">{{ data.value }}%</div>
-            <div style="font-size:0.6rem; color:var(--text-muted);">{{ data.date }} | ONS</div>
+            {% else %}<div class="empty-state">Loading US finance news...</div>{% endif %}
         </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-    {% else %}
-    <div class="empty-state" style="margin-top:0.75rem;">Loading property data from Land Registry...</div>
-    {% endif %}
-    </div>
-
-    <!-- BoE Calendar & Events -->
-    <div class="expand-header" onclick="toggleExpand(this)">
-        <span class="eh-label">Financial Calendar &amp; BoE Events (Live)</span>
-        <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
-    </div>
-    <div class="expand-body">
-    <div class="news-feed" style="margin-top:0.75rem;">
-        {% if exec_boe_events %}
-            {% for item in exec_boe_events[:8] %}
-            <div class="news-item">
-                <div class="news-source">🏛️ {{ item.get('source', 'Bank of England') }}</div>
-                <div class="news-title"><a href="{{ item.link }}" target="_blank">{{ item.title }}</a></div>
-                {% if item.summary %}<div class="news-summary">{{ item.summary }}</div>{% endif %}
-                {% if item.date %}<div class="news-date">{{ item.date }}</div>{% endif %}
-            </div>
-            {% endfor %}
-        {% else %}
-            <div class="empty-state">No BoE events available — BoE feed may be restricted on this server.</div>
-        {% endif %}
-    </div>
-    {% if exec_news.get('calendar') %}
-    <div style="margin-top:0.75rem; font-size:0.7rem; color:var(--accent-cyan); font-weight:600; text-transform:uppercase; letter-spacing:0.06em; padding-bottom:0.4rem; border-bottom:1px solid var(--border);">Rate Decisions &amp; Regulatory Deadlines</div>
-    <div class="news-feed" style="margin-top:0;">
-        {% for item in exec_news.calendar[:5] %}
-        <div class="news-item">
-            <div class="news-title"><a href="{{ item.link }}" target="_blank">{{ item.title }}</a></div>
-            {% if item.summary %}<div class="news-summary">{{ item.summary }}</div>{% endif %}
-            {% if item.date %}<div class="news-date">{{ item.date }}</div>{% endif %}
         </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-    </div>
 
-    <!-- Major Banking & M&A News — LIVE from Google News -->
-    <div class="expand-header" onclick="toggleExpand(this)">
-        <span class="eh-label">Major Banking &amp; M&amp;A News (Live)</span>
-        <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
-    </div>
-    <div class="expand-body">
-    <div class="news-feed" style="margin-top:0.75rem;">
-        {% if exec_news.get('banking_ma') %}
-            {% for item in exec_news.banking_ma %}
-            <div class="news-item">
-                <div class="news-title"><a href="{{ item.link }}" target="_blank">{{ item.title }}</a></div>
-                {% if item.summary %}<div class="news-summary">{{ item.summary }}</div>{% endif %}
-                {% if item.date %}<div class="news-date">{{ item.date }}</div>{% endif %}
+    </div><!-- /briefpanel-us -->
+
+    <!-- ==================== UK BRIEF ==================== -->
+    <div class="news-panel" id="briefpanel-uk">
+
+        <div class="expand-header" onclick="toggleExpand(this)">
+            <span class="eh-label">🇬🇧 UK Key Rates</span>
+            <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+        </div>
+        <div class="expand-body">
+        <div class="card-grid" style="margin-top:0.75rem;">
+            {% for item in grouped.get('uk_rates', []) %}
+            <div class="card accent-cyan" onclick="openHistory('{{ item.id }}', '{{ item.label }}')">
+                <div class="label">{{ item.label }}</div>
+                {% if item.value is not none %}<div class="value">{{ "%.2f"|format(item.value) }}%
+                    {% if item.direction == 'up' %}<span class="arrow up">&#9650;</span>{% elif item.direction == 'down' %}<span class="arrow down">&#9660;</span>{% endif %}
+                </div>{% else %}<div class="value na">N/A</div>{% endif %}
+                <div class="date">{{ item.date or '—' }}</div>
+                <div class="click-hint">&#9656; Click to view 3, 6, 12 month trends</div>
             </div>
             {% endfor %}
-        {% else %}
-            <div class="empty-state">Loading banking & M&A news...</div>
-        {% endif %}
-    </div>
-    </div>
-
-    <!-- Regulatory & Strategic — LIVE from Google News -->
-    <div class="expand-header" onclick="toggleExpand(this)">
-        <span class="eh-label">Regulatory &amp; Strategic Updates (Live)</span>
-        <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
-    </div>
-    <div class="expand-body">
-    <div class="news-feed" style="margin-top:0.75rem;">
-        {% if exec_news.get('regulatory') %}
-            {% for item in exec_news.regulatory %}
-            <div class="news-item">
-                <div class="news-title"><a href="{{ item.link }}" target="_blank">{{ item.title }}</a></div>
-                {% if item.summary %}<div class="news-summary">{{ item.summary }}</div>{% endif %}
-                {% if item.date %}<div class="news-date">{{ item.date }}</div>{% endif %}
+            {% for item in grouped.get('uk_macro', []) %}
+            <div class="card" onclick="openHistory('{{ item.id }}', '{{ item.label }}')">
+                <div class="label">{{ item.label }}</div>
+                {% if item.value is not none %}<div class="value">{{ "%.2f"|format(item.value) }}
+                    {% if item.direction == 'up' %}<span class="arrow up">&#9650;</span>{% elif item.direction == 'down' %}<span class="arrow down">&#9660;</span>{% endif %}
+                </div>{% else %}<div class="value na">N/A</div>{% endif %}
+                <div class="date">{{ item.date or '—' }}</div>
+                <div class="click-hint">&#9656; Click to view 3, 6, 12 month trends</div>
             </div>
             {% endfor %}
-        {% else %}
-            <div class="empty-state">Loading regulatory news...</div>
-        {% endif %}
-    </div>
-    </div>
+        </div>
+        </div>
 
-    <!-- London Property News — LIVE from Google News -->
-    <div class="expand-header" onclick="toggleExpand(this)">
-        <span class="eh-label">London Property News (Live)</span>
-        <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
-    </div>
-    <div class="expand-body">
-    <div class="news-feed" style="margin-top:0.75rem;">
+        <div class="expand-header" onclick="toggleExpand(this)">
+            <span class="eh-label">🇬🇧 London Property (HM Land Registry — Live)</span>
+            <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+        </div>
+        <div class="expand-body">
+        {% if exec_property %}
+        <div class="table-wrap" style="border-radius:12px; border:1px solid var(--border); margin-top:0.75rem;">
+            <table>
+                <thead><tr><th>Month</th><th>Avg Price</th><th>MoM</th><th>YoY</th></tr></thead>
+                <tbody>
+                    {% for item in exec_property %}
+                    <tr>
+                        <td style="font-weight:600;">{{ item.month }}</td>
+                        <td class="rate-value">£{{ "{:,.0f}".format(item.avgPrice) }}</td>
+                        <td><span style="font-size:0.78rem; color:{% if item.monthlyChange and item.monthlyChange|float < 0 %}var(--red){% elif item.monthlyChange and item.monthlyChange|float > 0 %}var(--green){% else %}var(--text-muted){% endif %};">{{ item.monthlyChange or '—' }}%</span></td>
+                        <td><span style="font-size:0.78rem; color:{% if item.annualChange and item.annualChange|float < 0 %}var(--red){% elif item.annualChange and item.annualChange|float > 0 %}var(--green){% else %}var(--text-muted){% endif %};">{{ item.annualChange or '—' }}%</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if exec_ons_hpi %}
+        <div style="display:flex; gap:1rem; margin-top:0.75rem; flex-wrap:wrap;">
+            {% for name, data in exec_ons_hpi.items() %}
+            <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:0.75rem 1rem; flex:1; min-width:200px;">
+                <div style="font-size:0.65rem; color:var(--text-muted); text-transform:uppercase;">{{ name }} Annual Change</div>
+                <div style="font-size:1.3rem; font-weight:700; color:{% if data.value|float > 0 %}var(--green){% else %}var(--red){% endif %};">{{ data.value }}%</div>
+                <div style="font-size:0.6rem; color:var(--text-muted);">{{ data.date }} | ONS</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% else %}<div class="empty-state" style="margin-top:0.75rem;">Loading Land Registry data...</div>{% endif %}
         {% if exec_news.get('property') %}
-            {% for item in exec_news.property %}
+        <div style="margin-top:0.75rem; font-size:0.7rem; color:var(--accent-cyan); font-weight:600; text-transform:uppercase; letter-spacing:0.06em; padding-bottom:0.4rem; border-bottom:1px solid var(--border);">London Property News</div>
+        <div class="news-feed">
+            {% for item in exec_news.property[:5] %}
             <div class="news-item">
                 <div class="news-title"><a href="{{ item.link }}" target="_blank">{{ item.title }}</a></div>
                 {% if item.summary %}<div class="news-summary">{{ item.summary }}</div>{% endif %}
                 {% if item.date %}<div class="news-date">{{ item.date }}</div>{% endif %}
             </div>
             {% endfor %}
-        {% else %}
-            <div class="empty-state">Loading property news...</div>
+        </div>
         {% endif %}
-    </div>
-    </div>
+        </div>
 
-    <!-- Leadership Tip — Rotating daily from pool of 15 -->
+        <div class="expand-header" onclick="toggleExpand(this)">
+            <span class="eh-label">🇬🇧 UK Banking &amp; Regulatory News</span>
+            <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+        </div>
+        <div class="expand-body">
+        <div class="news-feed" style="margin-top:0.75rem;">
+            {% for feed_key in ['central_banking', 'uk_finance'] %}
+            {% if news.get(feed_key) %}
+                {% for item in news[feed_key][:6] %}
+                <div class="news-item">
+                    <div class="news-source">{{ item.icon }} {{ item.source }}</div>
+                    <div class="news-title"><a href="{{ item.link }}" target="_blank">{{ item.title }}</a></div>
+                    {% if item.summary %}<div class="news-summary">{{ item.summary }}</div>{% endif %}
+                    {% if item.date %}<div class="news-date">{{ item.date }}</div>{% endif %}
+                </div>
+                {% endfor %}
+            {% endif %}
+            {% endfor %}
+        </div>
+        {% if exec_news.get('regulatory') %}
+        <div style="margin-top:0.75rem; font-size:0.7rem; color:var(--accent-purple); font-weight:600; text-transform:uppercase; letter-spacing:0.06em; padding-bottom:0.4rem; border-bottom:1px solid var(--border);">FCA &amp; PRA Regulatory Updates</div>
+        <div class="news-feed">
+            {% for item in exec_news.regulatory[:5] %}
+            <div class="news-item">
+                <div class="news-title"><a href="{{ item.link }}" target="_blank">{{ item.title }}</a></div>
+                {% if item.summary %}<div class="news-summary">{{ item.summary }}</div>{% endif %}
+                {% if item.date %}<div class="news-date">{{ item.date }}</div>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        </div>
+
+        <div class="expand-header" onclick="toggleExpand(this)">
+            <span class="eh-label">🇬🇧 BoE Events &amp; Calendar</span>
+            <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+        </div>
+        <div class="expand-body">
+        <div class="news-feed" style="margin-top:0.75rem;">
+            {% if exec_boe_events %}
+                {% for item in exec_boe_events[:6] %}
+                <div class="news-item">
+                    <div class="news-source">🏛️ {{ item.get('source', 'Bank of England') }}</div>
+                    <div class="news-title"><a href="{{ item.link }}" target="_blank">{{ item.title }}</a></div>
+                    {% if item.date %}<div class="news-date">{{ item.date }}</div>{% endif %}
+                </div>
+                {% endfor %}
+            {% else %}<div class="empty-state">Loading BoE events...</div>{% endif %}
+        </div>
+        </div>
+
+    </div><!-- /briefpanel-uk -->
+
+    <!-- ==================== GLOBAL BRIEF ==================== -->
+    <div class="news-panel" id="briefpanel-global">
+
+        <div class="expand-header" onclick="toggleExpand(this)">
+            <span class="eh-label">🌍 FX &amp; Commodities</span>
+            <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+        </div>
+        <div class="expand-body">
+        <div class="card-grid card-grid-wide" style="margin-top:0.75rem;">
+            {% for item in grouped.get('fx_rates', []) %}
+            <div class="card accent-amber" onclick="openHistory('{{ item.id }}', '{{ item.label }}')">
+                <div class="label">{{ item.label }}</div>
+                {% if item.value is not none %}<div class="value">{{ "%.4f"|format(item.value) }}
+                    {% if item.direction == 'up' %}<span class="arrow up">&#9650;</span>{% elif item.direction == 'down' %}<span class="arrow down">&#9660;</span>{% endif %}
+                </div>{% else %}<div class="value na">N/A</div>{% endif %}
+                <div class="date">{{ item.date or '—' }}</div>
+                <div class="click-hint">&#9656; Click to view 3, 6, 12 month trends</div>
+            </div>
+            {% endfor %}
+            {% if exec_fx.get('GBP_PKR') and exec_fx.GBP_PKR.value %}
+            <div class="card accent-purple">
+                <div class="label">GBP / PKR</div>
+                <div class="value">{{ "%.2f"|format(exec_fx.GBP_PKR.value) }}</div>
+                <div class="date">Live | {{ exec_fx.GBP_PKR.source }}</div>
+            </div>
+            {% endif %}
+            {% if exec_fx.get('USD_per_XAU') and exec_fx.USD_per_XAU.value %}
+            <div class="card accent-amber">
+                <div class="label">Gold (USD/oz)</div>
+                <div class="value">${{ "{:,.0f}".format(exec_fx.USD_per_XAU.value) }}</div>
+                <div class="date">Live | {{ exec_fx.USD_per_XAU.source }}</div>
+            </div>
+            {% endif %}
+            {% set brent = grouped.get('commodities', [])|selectattr('id', 'equalto', 'DCOILBRENTEU')|first %}
+            {% if brent and brent.value is not none %}
+            <div class="card accent-red" onclick="openHistory('DCOILBRENTEU', 'Brent Crude Oil')">
+                <div class="label">Brent Crude Oil</div>
+                <div class="value">${{ "%.2f"|format(brent.value) }}/bbl</div>
+                <div class="date">{{ brent.date }} | FRED</div>
+                <div class="click-hint">&#9656; Click to view 3, 6, 12 month trends</div>
+            </div>
+            {% endif %}
+        </div>
+        </div>
+
+        <div class="expand-header" onclick="toggleExpand(this)">
+            <span class="eh-label">🌍 Banking &amp; M&amp;A News</span>
+            <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+        </div>
+        <div class="expand-body">
+        <div class="news-feed" style="margin-top:0.75rem;">
+            {% if exec_news.get('banking_ma') %}
+                {% for item in exec_news.banking_ma %}
+                <div class="news-item">
+                    <div class="news-title"><a href="{{ item.link }}" target="_blank">{{ item.title }}</a></div>
+                    {% if item.summary %}<div class="news-summary">{{ item.summary }}</div>{% endif %}
+                    {% if item.date %}<div class="news-date">{{ item.date }}</div>{% endif %}
+                </div>
+                {% endfor %}
+            {% else %}<div class="empty-state">Loading M&A news...</div>{% endif %}
+        </div>
+        </div>
+
+        <div class="expand-header" onclick="toggleExpand(this)">
+            <span class="eh-label">🌍 Global Market News</span>
+            <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+        </div>
+        <div class="expand-body">
+        <div class="news-feed" style="margin-top:0.75rem;">
+            {% for feed_key in ['global_markets', 'global_finance'] %}
+            {% if news.get(feed_key) %}
+                {% for item in news[feed_key][:6] %}
+                <div class="news-item">
+                    <div class="news-source">{{ item.icon }} {{ item.source }}</div>
+                    <div class="news-title"><a href="{{ item.link }}" target="_blank">{{ item.title }}</a></div>
+                    {% if item.summary %}<div class="news-summary">{{ item.summary }}</div>{% endif %}
+                    {% if item.date %}<div class="news-date">{{ item.date }}</div>{% endif %}
+                </div>
+                {% endfor %}
+            {% endif %}
+            {% endfor %}
+        </div>
+        </div>
+
+    </div><!-- /briefpanel-global -->
+
+    <!-- Leadership Tip -->
     <div class="expand-header" onclick="toggleExpand(this)">
         <span class="eh-label">Daily Leadership Insight</span>
         <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
     </div>
     <div class="expand-body">
     <div style="margin-top:0.75rem; background:linear-gradient(135deg, rgba(6,182,212,0.08), rgba(139,92,246,0.06)); border:1px solid var(--border); border-left:3px solid var(--accent-cyan); border-radius:10px; padding:1.25rem;">
-        <div style="font-size:0.9rem; color:var(--text-primary); line-height:1.6; font-style:italic;">
-            "{{ exec_leadership_tip }}"
-        </div>
+        <div style="font-size:0.9rem; color:var(--text-primary); line-height:1.6; font-style:italic;">"{{ exec_leadership_tip }}"</div>
         <div style="font-size:0.6rem; color:var(--text-muted); margin-top:0.5rem;">Rotates daily from a curated pool of executive insights.</div>
     </div>
     </div>
@@ -1645,6 +1747,14 @@
         const body = header.nextElementSibling;
         header.classList.toggle('collapsed');
         body.classList.toggle('collapsed');
+    }
+
+    // ---- Brief sub-tabs (US/UK/Global) ----
+    function switchBriefTab(tab) {
+        document.querySelectorAll('.news-subtab[data-brieftab]').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('[id^="briefpanel-"]').forEach(p => p.classList.remove('active'));
+        document.querySelector(`.news-subtab[data-brieftab="${tab}"]`).classList.add('active');
+        document.getElementById('briefpanel-' + tab).classList.add('active');
     }
 
     // ---- News sub-tabs ----
