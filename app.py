@@ -41,12 +41,62 @@ AUTH_PASSWORD = "admin1"
 # FRED series definitions
 # ---------------------------------------------------------------------------
 SERIES = {
-    # central_banks is now rendered via CENTRAL_BANK_CARDS (multi-rate per bank)
-    # These FRED series are still fetched individually for the cache
-    "central_banks_fred": {
-        "DFEDTARU":          "Fed Target Upper",
-        "DFEDTARL":          "Fed Target Lower",
-        "IUDSOIA":           "BoE SONIA",
+    # ===== US REGION =====
+    "us_rates": {
+        "DFEDTARU":        "Fed Target Upper",
+        "DFEDTARL":        "Fed Target Lower",
+        "SOFR":            "SOFR",
+        "DPRIME":          "US Prime Rate",
+        "MORTGAGE30US":    "US 30-Year Mortgage",
+        "T10Y2Y":          "2s10s Spread",
+    },
+    "us_treasuries": {
+        "DGS1MO":  "1 Month", "DGS3MO":  "3 Month", "DGS6MO":  "6 Month",
+        "DGS1":    "1 Year", "DGS2":    "2 Year", "DGS5":    "5 Year",
+        "DGS7":    "7 Year", "DGS10":   "10 Year", "DGS20":   "20 Year", "DGS30":   "30 Year",
+    },
+    "us_macro": {
+        "UNRATE":           "US Unemployment Rate",
+        "CPIAUCSL":         "US CPI (Index)",
+        "T10YIE":           "US 10Y Breakeven Inflation",
+        "A191RL1Q225SBEA":  "US Real GDP Growth %",
+        "INDPRO":           "US Industrial Production",
+        "SP500":            "S&P 500",
+        "NASDAQCOM":        "NASDAQ Composite",
+        "DTWEXBGS":         "US Dollar Index",
+    },
+    "us_property": {
+        "CSUSHPISA":       "Case-Shiller Home Price Index",
+        "MSPUS":           "US Median Home Sale Price",
+        "HOUST":           "US Housing Starts (000s)",
+    },
+    "us_credit": {
+        "BAMLC0A0CM":      "IG Corporate Spread",
+        "BAMLH0A0HYM2":    "HY Corporate Spread",
+    },
+    # ===== UK REGION =====
+    "uk_rates": {
+        "IUDSOIA":           "UK SONIA (Overnight)",
+        "IRSTCI01GBM156N":   "UK Short-Term Rate",
+        "IRLTLT01GBM156N":   "UK Long-Term Gilt",
+    },
+    "uk_macro": {
+        "GBRCPIALLMINMEI":   "UK CPI (Index)",
+        "LRHUTTTTGBM156S":   "UK Unemployment Rate",
+    },
+    # ===== GLOBAL / REST OF WORLD =====
+    "fx_rates": {
+        "DEXUSUK":  "GBP/USD", "DEXUSEU":  "EUR/USD", "DEXJPUS":  "USD/JPY",
+    },
+    "global_bonds_10y": {
+        "DGS10": "US 10Y", "IRLTLT01GBM156N": "UK 10Y",
+        "IRLTLT01DEM156N": "Germany 10Y", "IRLTLT01FRM156N": "France 10Y",
+        "IRLTLT01JPM156N": "Japan 10Y", "IRLTLT01CAM156N": "Canada 10Y",
+        "IRLTLT01AUM156N": "Australia 10Y", "IRLTLT01ITM156N": "Italy 10Y",
+        "IRLTLT01ESM156N": "Spain 10Y", "IRLTLT01CHM156N": "Switzerland 10Y",
+        "IRLTLT01KRM156N": "South Korea 10Y", "IRLTLT01NZM156N": "New Zealand 10Y",
+    },
+    "global_rates_fred": {
         "ECBMRRFR":          "ECB Main Refi (FRED)",
         "IR3TIB01JPM156N":   "Japan 3M Interbank",
         "IR3TIB01CHM156N":   "Swiss 3M Interbank",
@@ -54,58 +104,8 @@ SERIES = {
         "IRSTCI01CAM156N":   "Bank of Canada Rate",
         "IR3TIB01CNM156N":   "China 3M Interbank",
     },
-    "us_treasuries": {
-        "DGS1MO":  "1 Month",
-        "DGS3MO":  "3 Month",
-        "DGS6MO":  "6 Month",
-        "DGS1":    "1 Year",
-        "DGS2":    "2 Year",
-        "DGS5":    "5 Year",
-        "DGS7":    "7 Year",
-        "DGS10":   "10 Year",
-        "DGS20":   "20 Year",
-        "DGS30":   "30 Year",
-    },
-    "global_bonds_10y": {
-        "DGS10":             "US 10Y",
-        "IRLTLT01GBM156N":   "UK 10Y",
-        "IRLTLT01DEM156N":   "Germany 10Y",
-        "IRLTLT01FRM156N":   "France 10Y",
-        "IRLTLT01JPM156N":   "Japan 10Y",
-        "IRLTLT01CAM156N":   "Canada 10Y",
-        "IRLTLT01AUM156N":   "Australia 10Y",
-        "IRLTLT01ITM156N":   "Italy 10Y",
-        "IRLTLT01ESM156N":   "Spain 10Y",
-        "IRLTLT01CHM156N":   "Switzerland 10Y",
-        "IRLTLT01KRM156N":   "South Korea 10Y",
-        "IRLTLT01NZM156N":   "New Zealand 10Y",
-    },
-    "spreads": {
-        "T10Y2Y":          "2s10s Spread",
-        "SOFR":            "SOFR",
-        "BAMLC0A0CM":      "IG Corporate Spread",
-        "BAMLH0A0HYM2":    "HY Corporate Spread",
-        "TEDRATE":         "TED Spread (Discontinued)",
-        "DPRIME":          "US Prime Rate",
-        "MORTGAGE30US":    "US 30-Year Mortgage",
-    },
     "commodities": {
         "DCOILBRENTEU":    "Brent Crude Oil ($/bbl)",
-    },
-    "uk_rates": {
-        "IUDSOIA":           "UK SONIA (Overnight)",
-        "IRSTCI01GBM156N":   "UK Short-Term Rate (Monthly)",
-        "IRLTLT01GBM156N":   "UK Long-Term Gilt (Monthly)",
-    },
-    "fx_rates": {
-        "DEXUSUK":  "GBP/USD",
-        "DEXUSEU":  "EUR/USD",
-        "DEXJPUS":  "USD/JPY",
-    },
-    "inflation": {
-        "CPIAUCSL":        "US CPI (Index)",
-        "GBRCPIALLMINMEI": "UK CPI (Index)",
-        "T10YIE":          "US 10Y Breakeven Inflation",
     },
 }
 
@@ -199,6 +199,9 @@ ALL_SERIES["ECB_MLF"] = "ECB Marginal Lending Rate"
 # RSS News Feed definitions
 # ---------------------------------------------------------------------------
 NEWS_FEEDS = {
+    "us_finance": [
+        {"name": "Google News — US Economy & Finance", "url": "https://news.google.com/rss/search?q=US+economy+finance+Federal+Reserve+Wall+Street&hl=en-US&gl=US&ceid=US:en", "icon": "🇺🇸"},
+    ],
     "uk_finance": [
         {"name": "Google News — UK Finance", "url": "https://news.google.com/rss/search?q=UK+finance+economy+banking+interest+rates&hl=en-GB&gl=GB&ceid=GB:en", "icon": "🇬🇧"},
         {"name": "Google News — UK Economy", "url": "https://news.google.com/rss/search?q=UK+economy+inflation+Bank+of+England&hl=en-GB&gl=GB&ceid=GB:en", "icon": "📊"},
@@ -213,6 +216,9 @@ NEWS_FEEDS = {
         {"name": "Google News — Global Markets", "url": "https://news.google.com/rss/search?q=global+markets+stocks+bonds+finance&hl=en-GB&gl=GB&ceid=GB:en", "icon": "🌍"},
         {"name": "Google News — Central Banks", "url": "https://news.google.com/rss/search?q=Federal+Reserve+ECB+central+bank+interest+rate&hl=en-GB&gl=GB&ceid=GB:en", "icon": "🏛️"},
         {"name": "CNBC — Finance", "url": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664", "icon": "📈"},
+    ],
+    "global_finance": [
+        {"name": "Google News — Global Economy & Trade", "url": "https://news.google.com/rss/search?q=global+economy+emerging+markets+trade&hl=en-US&gl=US&ceid=US:en", "icon": "🌐"},
     ],
 }
 
@@ -284,6 +290,13 @@ EXEC_NEWS_FEEDS = {
         "queries": [
             "https://news.google.com/rss/search?q=%22Bank+of+England%22+rate+decision+MPC+2026&hl=en-GB&gl=GB&ceid=GB:en",
             "https://news.google.com/rss/search?q=FCA+deadline+consultation+UK+finance+2026&hl=en-GB&gl=GB&ceid=GB:en",
+        ],
+        "max_items": 5,
+    },
+    "us_property": {
+        "label": "US Housing & Property Market",
+        "queries": [
+            "https://news.google.com/rss/search?q=US+housing+market+property+prices+mortgage+rates&hl=en-US&gl=US&ceid=US:en",
         ],
         "max_items": 5,
     },
@@ -912,6 +925,43 @@ def _generate_executive_summary(rates: dict, exec_fx: dict, health: dict) -> lis
             "severity": "warning" if mortgage > 7 else "info"
         })
 
+    # --- US Unemployment ---
+    unrate = rates.get("UNRATE", {}).get("value")
+    if unrate is not None:
+        if unrate > 5:
+            summary.append({
+                "icon": "⚠️", "category": "US Labor Market",
+                "text": f"US unemployment at {unrate:.1f}% — rising above 5% threshold. Labour market softening may signal broader economic slowdown. Review credit provisioning.",
+                "severity": "warning"
+            })
+        else:
+            summary.append({
+                "icon": "👷", "category": "US Labor Market",
+                "text": f"US unemployment at {unrate:.1f}% — labour market remains resilient.",
+                "severity": "positive" if unrate < 4 else "info"
+            })
+
+    # --- S&P 500 ---
+    sp500 = rates.get("SP500", {}).get("value")
+    if sp500 is not None:
+        sp_direction = rates.get("SP500", {}).get("direction")
+        arrow = "up" if sp_direction == "up" else ("down" if sp_direction == "down" else "flat")
+        summary.append({
+            "icon": "📈", "category": "US Equities",
+            "text": f"S&P 500 at {sp500:,.2f} (trending {arrow}). {'Risk-on sentiment prevails.' if sp_direction == 'up' else 'Monitor for sustained weakness.' if sp_direction == 'down' else 'Range-bound trading.'}",
+            "severity": "info"
+        })
+
+    # --- US Property (Case-Shiller) ---
+    case_shiller = rates.get("CSUSHPISA", {}).get("value")
+    if case_shiller is not None:
+        cs_direction = rates.get("CSUSHPISA", {}).get("direction")
+        summary.append({
+            "icon": "🏘️", "category": "US Property",
+            "text": f"Case-Shiller Home Price Index at {case_shiller:,.2f} — {'prices rising, watch for overheating.' if cs_direction == 'up' else 'price momentum cooling.' if cs_direction == 'down' else 'prices stable.'}",
+            "severity": "info"
+        })
+
     return summary
 
 
@@ -971,7 +1021,7 @@ def dashboard():
 
     grouped: dict[str, list[dict]] = {}
     for group_key, series_map in SERIES.items():
-        if group_key == "central_banks_fred":
+        if group_key == "global_rates_fred":
             continue  # Rendered via cb_cards instead
         items = []
         for sid, label in series_map.items():
