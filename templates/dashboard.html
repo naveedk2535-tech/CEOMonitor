@@ -1382,6 +1382,38 @@
     updateClock();
     setInterval(updateClock, 1000);
 
+    // ---- Auto-refresh if data not loaded yet ----
+    (function() {
+        const hasRates = {{ 'true' if grouped.get('fx_rates') else 'false' }};
+        if (!hasRates) {
+            // Show loading banner
+            const banner = document.createElement('div');
+            banner.id = 'loading-banner';
+            banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(90deg,#06b6d4,#3b82f6);color:white;text-align:center;padding:0.5rem;font-size:0.78rem;font-weight:600;font-family:Inter,sans-serif;';
+            banner.textContent = 'Loading live data... Page will refresh automatically.';
+            document.body.prepend(banner);
+
+            // Poll for data readiness, then reload
+            let checks = 0;
+            const poller = setInterval(async () => {
+                checks++;
+                try {
+                    const resp = await fetch('/api/status');
+                    const data = await resp.json();
+                    if (data.has_rates) {
+                        clearInterval(poller);
+                        location.reload();
+                    } else if (checks > 30) {
+                        clearInterval(poller);
+                        banner.textContent = 'Data taking longer than expected. Refresh the page manually.';
+                    }
+                } catch(e) {
+                    // ignore
+                }
+            }, 2000);
+        }
+    })();
+
     // ---- Expandable sections ----
     function toggleExpand(header) {
         const body = header.nextElementSibling;

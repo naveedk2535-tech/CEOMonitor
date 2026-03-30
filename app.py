@@ -8,6 +8,8 @@ from functools import wraps
 import re
 import time
 import hashlib
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
 
 import requests
 from flask import Flask, render_template, jsonify, request, redirect, url_for, session
@@ -599,39 +601,48 @@ def _search_google_news(query: str, max_items: int = 5) -> list[dict]:
         return []
 
 
-def _ensure_rates():
-    """Refresh rates if cache is stale."""
-    now = time.time()
-    if now - _cache["rates_fetched_at"] < RATES_CACHE_SECONDS and _cache["rates"]:
-        return
-    logger.info("Refreshing rate data…")
-    rates = {}
-    # Map ECB live IDs to their ECB SDW rate codes and FRED fallbacks
+def _fetch_single_rate(series_id: str, label: str) -> tuple:
+    """Fetch a single rate — used by thread pool."""
     ecb_live_map = {
         "ECB_DFR": ("DFR", "ECBDFR"),
         "ECB_MRR": ("MRR_FR", "ECBMRRFR"),
         "ECB_MLF": ("MLFR", "ECBMLFR"),
     }
+    if series_id in ecb_live_map:
+        ecb_code, fred_fallback = ecb_live_map[series_id]
+        data = _fetch_ecb_rate(ecb_code)
+        if data["value"] is None:
+            data = _fetch_fred_series(fred_fallback)
+            data["source"] = "FRED (fallback)"
+        data["label"] = label
+    else:
+        data = _fetch_fred_series(series_id)
+        data["label"] = label
+        data["source"] = "FRED"
+    data["freshness"] = _check_staleness(data.get("date"))
+    return (series_id, data)
 
-    for series_id, label in ALL_SERIES.items():
-        if series_id in ecb_live_map:
-            ecb_code, fred_fallback = ecb_live_map[series_id]
-            data = _fetch_ecb_rate(ecb_code)
-            if data["value"] is None:
-                data = _fetch_fred_series(fred_fallback)
-                data["source"] = "FRED (fallback)"
-            data["label"] = label
-        else:
-            data = _fetch_fred_series(series_id)
-            data["label"] = label
-            data["source"] = "FRED"
 
-        # Add staleness flag
-        data["freshness"] = _check_staleness(data.get("date"))
-        rates[series_id] = data
+def _do_refresh_rates():
+    """Fetch all rates in parallel using thread pool."""
+    logger.info("Refreshing rate data (parallel)…")
+    rates = {}
 
-    # Apply manual overrides for hopelessly stale FRED series
-    # Map interbank proxies to their policy rate overrides
+    # Fetch all series in parallel (10 threads)
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = {
+            executor.submit(_fetch_single_rate, sid, label): sid
+            for sid, label in ALL_SERIES.items()
+        }
+        for future in as_completed(futures):
+            try:
+                series_id, data = future.result()
+                rates[series_id] = data
+            except Exception as exc:
+                sid = futures[future]
+                logger.warning("Failed to fetch %s: %s", sid, exc)
+
+    # Apply manual overrides
     override_map = {
         "IR3TIB01JPM156N": "BOJ_POLICY",
         "IR3TIB01CHM156N": "SNB_POLICY",
@@ -640,7 +651,6 @@ def _ensure_rates():
         if fred_id in rates and override_key in MANUAL_OVERRIDES:
             fred_data = rates[fred_id]
             override = MANUAL_OVERRIDES[override_key]
-            # Add the official policy rate as a separate display field
             fred_data["official_rate"] = override["value"]
             fred_data["official_date"] = override["date"]
             fred_data["official_source"] = override["source"]
@@ -648,9 +658,56 @@ def _ensure_rates():
 
     with _lock:
         _cache["rates"] = rates
-        _cache["rates_fetched_at"] = now
+        _cache["rates_fetched_at"] = time.time()
         _cache["last_updated"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     logger.info("Rate data refresh complete.")
+
+
+def _do_refresh_all():
+    """Refresh all data sources — rates, news, exec data. Runs in background thread."""
+    _do_refresh_rates()
+    _ensure_news()
+    # Exec brief data
+    _cache["exec_fx"] = _fetch_exchange_rates()
+    _cache["exec_property"] = _fetch_london_property()
+    _cache["exec_ons_hpi"] = _fetch_ons_hpi()
+    _cache["exec_boe_events"] = _fetch_boe_events()
+    _cache["exec_news"] = _fetch_exec_news()
+    _cache["exec_fetched_at"] = time.time()
+    logger.info("All data refresh complete.")
+
+
+_bg_refresh_running = False
+
+
+def _ensure_data_background():
+    """Kick off a background refresh if cache is empty/stale. Non-blocking."""
+    global _bg_refresh_running
+    now = time.time()
+    rates_stale = now - _cache["rates_fetched_at"] > RATES_CACHE_SECONDS or not _cache["rates"]
+    news_stale = now - _cache["news_fetched_at"] > NEWS_CACHE_SECONDS or not _cache["news"]
+    exec_stale = now - _cache.get("exec_fetched_at", 0) > RATES_CACHE_SECONDS or not _cache.get("exec_fx")
+
+    if (rates_stale or news_stale or exec_stale) and not _bg_refresh_running:
+        _bg_refresh_running = True
+
+        def _bg_worker():
+            global _bg_refresh_running
+            try:
+                _do_refresh_all()
+            finally:
+                _bg_refresh_running = False
+
+        t = threading.Thread(target=_bg_worker, daemon=True)
+        t.start()
+
+
+def _ensure_rates():
+    """Refresh rates if cache is stale — now parallel."""
+    now = time.time()
+    if now - _cache["rates_fetched_at"] < RATES_CACHE_SECONDS and _cache["rates"]:
+        return
+    _do_refresh_rates()
 
 
 def _ensure_news():
@@ -897,18 +954,8 @@ def logout():
 @app.route("/")
 @login_required
 def dashboard():
-    _ensure_rates()
-    _ensure_news()
-
-    # Fetch executive brief data (FX, property, events, news sections)
-    now = time.time()
-    if now - _cache["exec_fetched_at"] > RATES_CACHE_SECONDS or not _cache["exec_fx"]:
-        _cache["exec_fx"] = _fetch_exchange_rates()
-        _cache["exec_property"] = _fetch_london_property()
-        _cache["exec_ons_hpi"] = _fetch_ons_hpi()
-        _cache["exec_boe_events"] = _fetch_boe_events()
-        _cache["exec_news"] = _fetch_exec_news()
-        _cache["exec_fetched_at"] = now
+    # Non-blocking: kick off background refresh, render with whatever we have
+    _ensure_data_background()
 
     with _lock:
         rates = dict(_cache["rates"])
@@ -1007,6 +1054,19 @@ def dashboard():
         last_updated=last_updated,
         news_last_updated=news_last_updated,
     )
+
+
+@app.route("/api/status")
+@login_required
+def api_status():
+    """Return data loading status — used by frontend to know when to refresh."""
+    return jsonify({
+        "has_rates": bool(_cache["rates"]),
+        "has_news": bool(_cache["news"]),
+        "has_exec": bool(_cache.get("exec_fx")),
+        "loading": _bg_refresh_running,
+        "last_updated": _cache["last_updated"],
+    })
 
 
 @app.route("/api/rates")
