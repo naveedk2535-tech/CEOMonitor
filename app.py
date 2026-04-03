@@ -1,4 +1,5 @@
 import os
+import json
 import logging
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone, timedelta
@@ -412,9 +413,12 @@ def _fetch_exchange_rates() -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Time-based cache (no APScheduler needed)
+# Time-based cache with disk persistence for fast cold starts
 # ---------------------------------------------------------------------------
-_cache: dict = {
+CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".cache.json")
+CACHE_SECONDS = 3600  # 60 minutes — all data refreshes on same cycle
+
+_EMPTY_CACHE: dict = {
     "rates": {},
     "news": {},
     "ubl_mentions": [],
@@ -429,10 +433,32 @@ _cache: dict = {
     "news_fetched_at": 0,
     "exec_fetched_at": 0,
 }
-_lock = Lock()
 
-RATES_CACHE_SECONDS = 1800   # 30 minutes
-NEWS_CACHE_SECONDS = 900     # 15 minutes
+
+def _load_cache_from_disk() -> dict:
+    """Load cached data from disk on startup — instant page loads after restarts."""
+    try:
+        with open(CACHE_FILE, "r") as f:
+            data = json.load(f)
+            logger.info("Loaded cache from disk (last updated: %s)", data.get("last_updated"))
+            return data
+    except (FileNotFoundError, json.JSONDecodeError, Exception) as exc:
+        logger.info("No disk cache found (%s), starting fresh.", exc)
+        return dict(_EMPTY_CACHE)
+
+
+def _save_cache_to_disk():
+    """Persist current cache to disk so next cold start is instant."""
+    try:
+        with open(CACHE_FILE, "w") as f:
+            json.dump(_cache, f)
+        logger.info("Cache saved to disk.")
+    except Exception as exc:
+        logger.warning("Failed to save cache to disk: %s", exc)
+
+
+_cache: dict = _load_cache_from_disk()
+_lock = Lock()
 
 
 def _fetch_fred_series(series_id: str) -> dict:
@@ -688,6 +714,7 @@ def _do_refresh_all():
     _cache["exec_news"] = _fetch_exec_news()
     _cache["exec_fetched_at"] = time.time()
     logger.info("All data refresh complete.")
+    _save_cache_to_disk()
 
 
 _bg_refresh_running = False
@@ -697,9 +724,9 @@ def _ensure_data_background():
     """Kick off a background refresh if cache is empty/stale. Non-blocking."""
     global _bg_refresh_running
     now = time.time()
-    rates_stale = now - _cache["rates_fetched_at"] > RATES_CACHE_SECONDS or not _cache["rates"]
-    news_stale = now - _cache["news_fetched_at"] > NEWS_CACHE_SECONDS or not _cache["news"]
-    exec_stale = now - _cache.get("exec_fetched_at", 0) > RATES_CACHE_SECONDS or not _cache.get("exec_fx")
+    rates_stale = now - _cache["rates_fetched_at"] > CACHE_SECONDS or not _cache["rates"]
+    news_stale = now - _cache["news_fetched_at"] > CACHE_SECONDS or not _cache["news"]
+    exec_stale = now - _cache.get("exec_fetched_at", 0) > CACHE_SECONDS or not _cache.get("exec_fx")
 
     if (rates_stale or news_stale or exec_stale) and not _bg_refresh_running:
         _bg_refresh_running = True
@@ -718,7 +745,7 @@ def _ensure_data_background():
 def _ensure_rates():
     """Refresh rates if cache is stale — now parallel."""
     now = time.time()
-    if now - _cache["rates_fetched_at"] < RATES_CACHE_SECONDS and _cache["rates"]:
+    if now - _cache["rates_fetched_at"] < CACHE_SECONDS and _cache["rates"]:
         return
     _do_refresh_rates()
 
@@ -726,7 +753,7 @@ def _ensure_rates():
 def _ensure_news():
     """Refresh news if cache is stale."""
     now = time.time()
-    if now - _cache["news_fetched_at"] < NEWS_CACHE_SECONDS and _cache["news"]:
+    if now - _cache["news_fetched_at"] < CACHE_SECONDS and _cache["news"]:
         return
     logger.info("Refreshing news feeds…")
     news = {}
