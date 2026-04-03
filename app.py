@@ -200,25 +200,25 @@ ALL_SERIES["ECB_MLF"] = "ECB Marginal Lending Rate"
 # ---------------------------------------------------------------------------
 NEWS_FEEDS = {
     "us_finance": [
-        {"name": "Google News — US Economy & Finance", "url": "https://news.google.com/rss/search?q=US+economy+finance+Federal+Reserve+Wall+Street&hl=en-US&gl=US&ceid=US:en", "icon": "🇺🇸"},
+        {"name": "Google News — US Economy & Finance", "url": "https://news.google.com/rss/search?q=US+economy+finance+Federal+Reserve+Wall+Street+when:7d&hl=en-US&gl=US&ceid=US:en", "icon": "🇺🇸"},
     ],
     "uk_finance": [
-        {"name": "Google News — UK Finance", "url": "https://news.google.com/rss/search?q=UK+finance+economy+banking+interest+rates&hl=en-GB&gl=GB&ceid=GB:en", "icon": "🇬🇧"},
-        {"name": "Google News — UK Economy", "url": "https://news.google.com/rss/search?q=UK+economy+inflation+Bank+of+England&hl=en-GB&gl=GB&ceid=GB:en", "icon": "📊"},
+        {"name": "Google News — UK Finance", "url": "https://news.google.com/rss/search?q=UK+finance+economy+banking+interest+rates+when:7d&hl=en-GB&gl=GB&ceid=GB:en", "icon": "🇬🇧"},
+        {"name": "Google News — UK Economy", "url": "https://news.google.com/rss/search?q=UK+economy+inflation+Bank+of+England+when:7d&hl=en-GB&gl=GB&ceid=GB:en", "icon": "📊"},
         {"name": "BBC — Business", "url": "http://feeds.bbci.co.uk/news/business/rss.xml", "icon": "📰"},
     ],
     "central_banking": [
-        {"name": "Google News — UK Banking Regulation", "url": "https://news.google.com/rss/search?q=UK+bank+regulation+FCA+PRA+%22Bank+of+England%22&hl=en-GB&gl=GB&ceid=GB:en", "icon": "⚖️"},
-        {"name": "Google News — UK Banking News", "url": "https://news.google.com/rss/search?q=UK+banking+sector+high+street+banks&hl=en-GB&gl=GB&ceid=GB:en", "icon": "🏦"},
-        {"name": "Google News — BoE Speeches", "url": "https://news.google.com/rss/search?q=%22Bank+of+England%22+speech+OR+announcement+OR+policy&hl=en-GB&gl=GB&ceid=GB:en", "icon": "🏛️"},
+        {"name": "Google News — UK Banking Regulation", "url": "https://news.google.com/rss/search?q=UK+bank+regulation+FCA+PRA+%22Bank+of+England%22+when:7d&hl=en-GB&gl=GB&ceid=GB:en", "icon": "⚖️"},
+        {"name": "Google News — UK Banking News", "url": "https://news.google.com/rss/search?q=UK+banking+sector+high+street+banks+when:7d&hl=en-GB&gl=GB&ceid=GB:en", "icon": "🏦"},
+        {"name": "Google News — BoE Speeches", "url": "https://news.google.com/rss/search?q=%22Bank+of+England%22+speech+OR+announcement+OR+policy+when:7d&hl=en-GB&gl=GB&ceid=GB:en", "icon": "🏛️"},
     ],
     "global_markets": [
-        {"name": "Google News — Global Markets", "url": "https://news.google.com/rss/search?q=global+markets+stocks+bonds+finance&hl=en-GB&gl=GB&ceid=GB:en", "icon": "🌍"},
-        {"name": "Google News — Central Banks", "url": "https://news.google.com/rss/search?q=Federal+Reserve+ECB+central+bank+interest+rate&hl=en-GB&gl=GB&ceid=GB:en", "icon": "🏛️"},
+        {"name": "Google News — Global Markets", "url": "https://news.google.com/rss/search?q=global+markets+stocks+bonds+finance+when:7d&hl=en-GB&gl=GB&ceid=GB:en", "icon": "🌍"},
+        {"name": "Google News — Central Banks", "url": "https://news.google.com/rss/search?q=Federal+Reserve+ECB+central+bank+interest+rate+when:7d&hl=en-GB&gl=GB&ceid=GB:en", "icon": "🏛️"},
         {"name": "CNBC — Finance", "url": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664", "icon": "📈"},
     ],
     "global_finance": [
-        {"name": "Google News — Global Economy & Trade", "url": "https://news.google.com/rss/search?q=global+economy+emerging+markets+trade&hl=en-US&gl=US&ceid=US:en", "icon": "🌐"},
+        {"name": "Google News — Global Economy & Trade", "url": "https://news.google.com/rss/search?q=global+economy+emerging+markets+trade+when:7d&hl=en-US&gl=US&ceid=US:en", "icon": "🌐"},
     ],
 }
 
@@ -265,38 +265,38 @@ EXEC_NEWS_FEEDS = {
     "banking_ma": {
         "label": "Major Banking & M&A News",
         "queries": [
-            "https://news.google.com/rss/search?q=UK+banking+M%26A+acquisition+deal&hl=en-GB&gl=GB&ceid=GB:en",
-            "https://news.google.com/rss/search?q=UK+bank+merger+finance+deal&hl=en-GB&gl=GB&ceid=GB:en",
+            "https://news.google.com/rss/search?q=UK+banking+M%26A+acquisition+deal+when:7d&hl=en-GB&gl=GB&ceid=GB:en",
+            "https://news.google.com/rss/search?q=UK+bank+merger+finance+deal+when:7d&hl=en-GB&gl=GB&ceid=GB:en",
         ],
         "max_items": 5,
     },
     "regulatory": {
         "label": "Regulatory & Strategic Updates",
         "queries": [
-            "https://news.google.com/rss/search?q=FCA+regulation+UK+banking+2026&hl=en-GB&gl=GB&ceid=GB:en",
-            "https://news.google.com/rss/search?q=PRA+%22Bank+of+England%22+prudential+regulation&hl=en-GB&gl=GB&ceid=GB:en",
+            "https://news.google.com/rss/search?q=FCA+regulation+UK+banking+when:7d&hl=en-GB&gl=GB&ceid=GB:en",
+            "https://news.google.com/rss/search?q=PRA+%22Bank+of+England%22+prudential+regulation+when:7d&hl=en-GB&gl=GB&ceid=GB:en",
         ],
         "max_items": 5,
     },
     "property": {
         "label": "London Property & BTL News",
         "queries": [
-            "https://news.google.com/rss/search?q=London+house+prices+property+market+BTL&hl=en-GB&gl=GB&ceid=GB:en",
+            "https://news.google.com/rss/search?q=London+house+prices+property+market+BTL+when:7d&hl=en-GB&gl=GB&ceid=GB:en",
         ],
         "max_items": 5,
     },
     "calendar": {
         "label": "UK Financial Calendar & Events",
         "queries": [
-            "https://news.google.com/rss/search?q=%22Bank+of+England%22+rate+decision+MPC+2026&hl=en-GB&gl=GB&ceid=GB:en",
-            "https://news.google.com/rss/search?q=FCA+deadline+consultation+UK+finance+2026&hl=en-GB&gl=GB&ceid=GB:en",
+            "https://news.google.com/rss/search?q=%22Bank+of+England%22+rate+decision+MPC+when:7d&hl=en-GB&gl=GB&ceid=GB:en",
+            "https://news.google.com/rss/search?q=FCA+deadline+consultation+UK+finance+when:7d&hl=en-GB&gl=GB&ceid=GB:en",
         ],
         "max_items": 5,
     },
     "us_property": {
         "label": "US Housing & Property Market",
         "queries": [
-            "https://news.google.com/rss/search?q=US+housing+market+property+prices+mortgage+rates&hl=en-US&gl=US&ceid=US:en",
+            "https://news.google.com/rss/search?q=US+housing+market+property+prices+mortgage+rates+when:7d&hl=en-US&gl=US&ceid=US:en",
         ],
         "max_items": 5,
     },
@@ -361,7 +361,7 @@ def _fetch_boe_events() -> list[dict]:
     if not articles:
         # Fallback: Google News for BoE events and calendar
         articles = _parse_rss(
-            "https://news.google.com/rss/search?q=%22Bank+of+England%22+event+OR+meeting+OR+speech+OR+decision&hl=en-GB&gl=GB&ceid=GB:en",
+            "https://news.google.com/rss/search?q=%22Bank+of+England%22+event+OR+meeting+OR+speech+OR+decision+when:7d&hl=en-GB&gl=GB&ceid=GB:en",
             max_items=10,
         )
         for a in articles:
@@ -607,7 +607,7 @@ def _search_google_news(query: str, max_items: int = 5) -> list[dict]:
     """Search Google News RSS for mentions of a query."""
     try:
         encoded = requests.utils.quote(query)
-        url = f"https://news.google.com/rss/search?q={encoded}&hl=en-GB&gl=GB&ceid=GB:en"
+        url = f"https://news.google.com/rss/search?q={encoded}+when:7d&hl=en-GB&gl=GB&ceid=GB:en"
         return _parse_rss(url, max_items)
     except Exception as exc:
         logger.warning("Failed Google News search for %s: %s", query, exc)
