@@ -197,6 +197,92 @@ ALL_SERIES["ECB_MRR"] = "ECB Main Refinancing Rate"
 ALL_SERIES["ECB_MLF"] = "ECB Marginal Lending Rate"
 
 # ---------------------------------------------------------------------------
+# City Monitor definitions
+# ---------------------------------------------------------------------------
+CITY_MONITOR = {
+    "chicago": {
+        "name": "Chicago",
+        "flag": "🏙️",
+        "fred_series": {
+            "CHXRSA": "Case-Shiller Home Price Index",
+            "CHIC917URN": "Chicago Metro Unemployment Rate",
+        },
+        "news_query": "Chicago+economy+finance+business",
+        "property_query": "Chicago+housing+property+real+estate+prices",
+    },
+    "new_york": {
+        "name": "New York",
+        "flag": "🗽",
+        "fred_series": {
+            "NYXRSA": "Case-Shiller Home Price Index",
+            "NEWY636URN": "NYC Metro Unemployment Rate",
+        },
+        "news_query": "New+York+City+economy+finance+Wall+Street+business",
+        "property_query": "New+York+City+housing+property+real+estate+prices",
+    },
+    "los_angeles": {
+        "name": "Los Angeles",
+        "flag": "🌴",
+        "fred_series": {
+            "LXXRSA": "Case-Shiller Home Price Index",
+            "LOSA706URN": "LA Metro Unemployment Rate",
+        },
+        "news_query": "Los+Angeles+economy+finance+business",
+        "property_query": "Los+Angeles+housing+property+real+estate+prices",
+    },
+    "miami": {
+        "name": "Miami",
+        "flag": "🌊",
+        "fred_series": {
+            "MIXRSA": "Case-Shiller Home Price Index",
+            "MIAM112URN": "Miami Metro Unemployment Rate",
+        },
+        "news_query": "Miami+economy+finance+business",
+        "property_query": "Miami+housing+property+real+estate+prices",
+    },
+    "san_francisco": {
+        "name": "San Francisco",
+        "flag": "🌉",
+        "fred_series": {
+            "SFXRSA": "Case-Shiller Home Price Index",
+            "SANF806URN": "SF Metro Unemployment Rate",
+        },
+        "news_query": "San+Francisco+economy+finance+tech+business",
+        "property_query": "San+Francisco+housing+property+real+estate+prices",
+    },
+    "philadelphia": {
+        "name": "Philadelphia",
+        "flag": "🔔",
+        "fred_series": {
+            "PHXRSA": "Case-Shiller Home Price Index",
+            "PHIL942URN": "Philadelphia Metro Unemployment Rate",
+        },
+        "news_query": "Philadelphia+economy+finance+business",
+        "property_query": "Philadelphia+housing+property+real+estate+prices",
+    },
+    "london": {
+        "name": "London",
+        "flag": "🇬🇧",
+        "fred_series": {},
+        "news_query": "London+economy+finance+City+business",
+        "property_query": "London+housing+property+house+prices",
+        "use_land_registry": True,
+    },
+    "manchester": {
+        "name": "Manchester",
+        "flag": "🇬🇧",
+        "fred_series": {},
+        "news_query": "Manchester+economy+business+finance",
+        "property_query": "Manchester+housing+property+house+prices",
+    },
+}
+
+# Add city FRED series to ALL_SERIES for label lookups & fetching
+for _city in CITY_MONITOR.values():
+    for _sid, _label in _city.get("fred_series", {}).items():
+        ALL_SERIES[_sid] = _label
+
+# ---------------------------------------------------------------------------
 # RSS News Feed definitions
 # ---------------------------------------------------------------------------
 NEWS_FEEDS = {
@@ -1130,6 +1216,7 @@ def dashboard():
         exec_leadership_tip=_get_leadership_tip(),
         last_updated=last_updated,
         news_last_updated=news_last_updated,
+        city_monitor=CITY_MONITOR,
     )
 
 
@@ -1186,6 +1273,65 @@ def api_history(series_id):
         "months": months,
         "data": data,
     })
+
+
+@app.route("/api/city/<city_id>")
+@login_required
+def api_city(city_id):
+    """Return city-specific data — metrics + news. Fetched on demand, cached."""
+    city = CITY_MONITOR.get(city_id)
+    if not city:
+        return jsonify({"error": "Unknown city"}), 404
+
+    cache_key = f"city_{city_id}"
+    cached = _cache.get(cache_key)
+    now = time.time()
+    if cached and now - cached.get("fetched_at", 0) < CACHE_SECONDS:
+        return jsonify(cached["data"])
+
+    # Fetch FRED metrics in parallel
+    metrics = []
+    if city.get("fred_series"):
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = {
+                executor.submit(_fetch_fred_series, sid): (sid, label)
+                for sid, label in city["fred_series"].items()
+            }
+            for future in as_completed(futures):
+                sid, label = futures[future]
+                try:
+                    data = future.result()
+                    data["id"] = sid
+                    data["label"] = label
+                    metrics.append(data)
+                except Exception:
+                    metrics.append({"id": sid, "label": label, "value": None, "date": None, "direction": None})
+
+    # Fetch London Land Registry if applicable
+    property_data = []
+    if city.get("use_land_registry"):
+        property_data = _fetch_london_property()
+
+    # Fetch city news
+    hl = "en-GB&gl=GB&ceid=GB:en" if city_id in ("london", "manchester") else "en-US&gl=US&ceid=US:en"
+    news_url = f"https://news.google.com/rss/search?q={city['news_query']}+when:7d&hl={hl}"
+    property_url = f"https://news.google.com/rss/search?q={city['property_query']}+when:7d&hl={hl}"
+
+    news_items = _parse_rss(news_url, max_items=8)
+    property_news = _parse_rss(property_url, max_items=6)
+
+    result = {
+        "city": city["name"],
+        "flag": city["flag"],
+        "metrics": metrics,
+        "property_data": property_data,
+        "news": news_items,
+        "property_news": property_news,
+        "last_updated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+    }
+
+    _cache[cache_key] = {"data": result, "fetched_at": now}
+    return jsonify(result)
 
 
 def _traffic(value, thresholds):

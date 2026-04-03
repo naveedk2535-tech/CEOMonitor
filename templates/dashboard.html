@@ -513,6 +513,7 @@
     <div class="nav-tab" data-tab="us">US Markets</div>
     <div class="nav-tab" data-tab="uk">UK Markets</div>
     <div class="nav-tab" data-tab="global">Global Markets</div>
+    <div class="nav-tab" data-tab="city">City Monitor</div>
     <!-- <div class="nav-tab" data-tab="ubl">UBL UK Monitor</div> -->
     <div class="nav-tab" data-tab="links">Quick Links</div>
 </nav>
@@ -1506,6 +1507,86 @@
 </div><!-- /tab-global -->
 
 <!-- ================================================================== -->
+<!-- TAB: CITY MONITOR                                                  -->
+<!-- ================================================================== -->
+<div class="tab-content" id="tab-city">
+
+    <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap;">
+        <div style="font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:0.1em; color:var(--accent-cyan);">Select City</div>
+        <select id="citySelector" onchange="loadCityData(this.value)" style="
+            padding:0.6rem 1.2rem; background:var(--bg-card); border:1px solid var(--border);
+            border-radius:10px; color:var(--text-primary); font-family:'Inter',sans-serif;
+            font-size:0.9rem; font-weight:600; cursor:pointer; outline:none;
+            transition:border-color 0.2s;
+        ">
+            <option value="" disabled selected>Choose a city...</option>
+            {% for cid, city in city_monitor.items() %}
+            <option value="{{ cid }}">{{ city.flag }} {{ city.name }}</option>
+            {% endfor %}
+        </select>
+        <div id="cityLoading" style="display:none; font-size:0.78rem; color:var(--accent-cyan);">Loading data...</div>
+        <div id="cityLastUpdated" style="font-size:0.65rem; color:var(--text-muted);"></div>
+    </div>
+
+    <div id="cityContent" style="display:none;">
+
+        <!-- City Metrics -->
+        <div id="cityMetricsSection">
+            <div class="expand-header" onclick="toggleExpand(this)">
+                <span class="eh-label" id="cityMetricsLabel">Key Metrics</span>
+                <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+            </div>
+            <div class="expand-body">
+                <div class="card-grid card-grid-wide" id="cityMetricsGrid" style="margin-top:0.75rem;"></div>
+            </div>
+        </div>
+
+        <!-- City Property Data (London Land Registry) -->
+        <div id="cityPropertyDataSection" style="display:none;">
+            <div class="expand-header" onclick="toggleExpand(this)">
+                <span class="eh-label">Property Market Data (HM Land Registry)</span>
+                <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+            </div>
+            <div class="expand-body">
+                <div class="table-wrap" style="border-radius:12px; border:1px solid var(--border); margin-top:0.75rem;">
+                    <table>
+                        <thead><tr><th>Month</th><th>Avg Price</th><th>MoM</th><th>YoY</th></tr></thead>
+                        <tbody id="cityPropertyTable"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- City Property News -->
+        <div class="expand-header" onclick="toggleExpand(this)">
+            <span class="eh-label" id="cityPropertyNewsLabel">Property & Housing News</span>
+            <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+        </div>
+        <div class="expand-body">
+            <div class="news-feed" id="cityPropertyNews" style="margin-top:0.75rem;"></div>
+        </div>
+
+        <!-- City Economy News -->
+        <div class="expand-header" onclick="toggleExpand(this)">
+            <span class="eh-label" id="cityNewsLabel">Economy & Business News</span>
+            <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+        </div>
+        <div class="expand-body">
+            <div class="news-feed" id="cityNews" style="margin-top:0.75rem;"></div>
+        </div>
+
+    </div>
+
+    <!-- Empty state before city is selected -->
+    <div id="cityEmptyState" class="empty-state" style="padding:4rem 2rem;">
+        <div style="font-size:2rem; margin-bottom:0.75rem;">🏙️</div>
+        <div style="font-size:0.95rem; font-weight:600; margin-bottom:0.5rem;">Select a city above to view local metrics and news</div>
+        <div style="font-size:0.78rem; color:var(--text-muted);">Available: Chicago, New York, Los Angeles, Miami, San Francisco, Philadelphia, London, Manchester</div>
+    </div>
+
+</div><!-- /tab-city -->
+
+<!-- ================================================================== -->
 <!-- TAB 4: UBL UK MONITOR                                              -->
 <!-- ================================================================== -->
 <div class="tab-content" id="tab-ubl">
@@ -1922,6 +2003,117 @@
         } catch (err) {
             loading.textContent = 'Failed to load data. Try again.';
             loading.style.display = 'flex';
+        }
+    }
+
+    // ---- City Monitor ----
+    let cityCache = {};
+
+    async function loadCityData(cityId) {
+        if (!cityId) return;
+
+        const loading = document.getElementById('cityLoading');
+        const content = document.getElementById('cityContent');
+        const emptyState = document.getElementById('cityEmptyState');
+
+        // Show from cache instantly if available
+        if (cityCache[cityId]) {
+            renderCity(cityCache[cityId]);
+        }
+
+        loading.style.display = 'inline';
+        try {
+            const resp = await fetch(`/api/city/${cityId}`);
+            const data = await resp.json();
+            if (data.error) {
+                loading.textContent = 'Error loading city data.';
+                return;
+            }
+            cityCache[cityId] = data;
+            renderCity(data);
+        } catch (err) {
+            loading.textContent = 'Failed to load. Try again.';
+            return;
+        }
+        loading.style.display = 'none';
+    }
+
+    function renderCity(data) {
+        const content = document.getElementById('cityContent');
+        const emptyState = document.getElementById('cityEmptyState');
+        emptyState.style.display = 'none';
+        content.style.display = 'block';
+
+        // Update labels
+        document.getElementById('cityMetricsLabel').textContent = data.flag + ' ' + data.city + ' — Key Metrics';
+        document.getElementById('cityNewsLabel').textContent = data.flag + ' ' + data.city + ' — Economy & Business News';
+        document.getElementById('cityPropertyNewsLabel').textContent = data.flag + ' ' + data.city + ' — Property & Housing News';
+        document.getElementById('cityLastUpdated').textContent = 'Updated: ' + (data.last_updated || '');
+
+        // Metrics cards
+        const grid = document.getElementById('cityMetricsGrid');
+        const metricsSection = document.getElementById('cityMetricsSection');
+        if (data.metrics && data.metrics.length > 0) {
+            metricsSection.style.display = 'block';
+            grid.innerHTML = data.metrics.map(m => {
+                const val = m.value !== null ? (m.value > 1000 ? Number(m.value).toLocaleString('en-US', {maximumFractionDigits:0}) : Number(m.value).toFixed(2)) : 'N/A';
+                const arrow = m.direction === 'up' ? '<span class="arrow up">&#9650;</span>' : m.direction === 'down' ? '<span class="arrow down">&#9660;</span>' : '';
+                const suffix = m.label.includes('Unemployment') ? '%' : '';
+                const accent = m.label.includes('Unemployment') ? 'accent-amber' : 'accent-cyan';
+                return `<div class="card ${accent}" onclick="openHistory('${m.id}', '${m.label}')" style="cursor:pointer;">
+                    <div class="label">${m.label}</div>
+                    <div class="value${m.value === null ? ' na' : ''}">${val}${suffix} ${arrow}</div>
+                    <div class="date">${m.date || '—'}</div>
+                    <div class="click-hint">&#9656; Click to view 3, 6, 12 month trends</div>
+                </div>`;
+            }).join('');
+        } else {
+            metricsSection.style.display = 'none';
+        }
+
+        // Property data table (London)
+        const propSection = document.getElementById('cityPropertyDataSection');
+        const propTable = document.getElementById('cityPropertyTable');
+        if (data.property_data && data.property_data.length > 0) {
+            propSection.style.display = 'block';
+            propTable.innerHTML = data.property_data.map(p => {
+                const mom = p.monthlyChange ? parseFloat(p.monthlyChange) : null;
+                const yoy = p.annualChange ? parseFloat(p.annualChange) : null;
+                const momColor = mom !== null ? (mom < 0 ? 'var(--red)' : mom > 0 ? 'var(--green)' : 'var(--text-muted)') : 'var(--text-muted)';
+                const yoyColor = yoy !== null ? (yoy < 0 ? 'var(--red)' : yoy > 0 ? 'var(--green)' : 'var(--text-muted)') : 'var(--text-muted)';
+                return `<tr>
+                    <td style="font-weight:600;">${p.month}</td>
+                    <td class="rate-value">£${Number(p.avgPrice).toLocaleString('en-GB', {maximumFractionDigits:0})}</td>
+                    <td><span style="font-size:0.78rem; color:${momColor};">${p.monthlyChange || '—'}%</span></td>
+                    <td><span style="font-size:0.78rem; color:${yoyColor};">${p.annualChange || '—'}%</span></td>
+                </tr>`;
+            }).join('');
+        } else {
+            propSection.style.display = 'none';
+        }
+
+        // Property news
+        const propNews = document.getElementById('cityPropertyNews');
+        if (data.property_news && data.property_news.length > 0) {
+            propNews.innerHTML = data.property_news.map(n => `<div class="news-item">
+                <div class="news-title"><a href="${n.link}" target="_blank">${n.title}</a></div>
+                ${n.summary ? `<div class="news-summary">${n.summary}</div>` : ''}
+                ${n.date ? `<div class="news-date">${n.date}</div>` : ''}
+            </div>`).join('');
+        } else {
+            propNews.innerHTML = '<div class="empty-state">No property news found for this city in the past 7 days.</div>';
+        }
+
+        // Economy news
+        const newsEl = document.getElementById('cityNews');
+        if (data.news && data.news.length > 0) {
+            newsEl.innerHTML = data.news.map(n => `<div class="news-item">
+                <div class="news-title"><a href="${n.link}" target="_blank">${n.title}</a></div>
+                ${n.summary ? `<div class="news-summary">${n.summary}</div>` : ''}
+                ${n.date ? `<div class="news-date">${n.date}</div>` : ''}
+            </div>`).join('');
+        } else {
+            newsEl.innerHTML = '<div class="empty-state">No economy news found for this city in the past 7 days.</div>';
         }
     }
 </script>
