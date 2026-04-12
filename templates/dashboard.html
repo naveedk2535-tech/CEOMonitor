@@ -2341,9 +2341,11 @@
         if (analysis.factors && analysis.factors.length > 0) {
             factorsEl.innerHTML = analysis.factors.map(f => {
                 const color = f.score > 0 ? 'var(--green)' : f.score < 0 ? 'var(--red)' : 'var(--text-muted)';
-                const bar = f.score > 0 ? '+'.repeat(f.score) : f.score < 0 ? '-'.repeat(Math.abs(f.score)) : '~';
-                return `<div style="display:flex; align-items:center; gap:0.5rem; font-size:0.78rem;">
-                    <span style="width:110px; color:var(--text-primary); font-weight:500;">${f.name}</span>
+                return `<div style="display:flex; align-items:center; gap:0.5rem; font-size:0.78rem; position:relative;" class="oil-factor-row">
+                    <span style="width:120px; color:var(--text-primary); font-weight:500; display:flex; align-items:center; gap:0.3rem;">
+                        ${f.name}
+                        <span title="${f.hint || ''}" style="display:inline-flex; align-items:center; justify-content:center; width:14px; height:14px; border-radius:50%; background:rgba(42,53,80,0.8); border:1px solid var(--border); color:var(--text-muted); font-size:0.55rem; font-weight:700; cursor:help; flex-shrink:0;">?</span>
+                    </span>
                     <span style="width:35px; color:${color}; font-weight:700; text-align:center;">${f.score > 0 ? '+' + f.score : f.score}</span>
                     <div style="flex:1; height:8px; background:rgba(42,53,80,0.6); border-radius:4px; overflow:hidden;">
                         <div style="width:${Math.abs(f.score) * 25}%; height:100%; background:${color}; border-radius:4px; ${f.score < 0 ? 'margin-left:auto;' : ''}"></div>

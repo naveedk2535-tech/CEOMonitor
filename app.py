@@ -874,7 +874,7 @@ def _build_oil_analysis(wti_prices, inventory_data, gasoline_demand, dxy_data, b
             "score": trend_score,
             "explanation": f"WTI at ${latest:.2f}. {'Strong upward momentum — prices accelerating.' if trend_score == 2 else 'Rising prices signal bullish momentum.' if trend_score > 0 else 'Sharp decline — prices under heavy selling pressure.' if trend_score == -2 else 'Falling prices signal bearish pressure.' if trend_score < 0 else 'Prices stable in range.'}",
         })
-        analysis["factors"].append({"name": "Price Trend", "score": trend_score, "weight": "25%"})
+        analysis["factors"].append({"name": "Price Trend", "score": trend_score, "weight": "25%", "hint": "Weekly and monthly WTI price momentum. Rising prices = bullish, falling = bearish."})
 
     # Step 2: Inventory Analysis — 3-week trend for noise reduction
     # Note: EIA WCRSTUS1 values are in THOUSANDS of barrels
@@ -905,7 +905,7 @@ def _build_oil_analysis(wti_prices, inventory_data, gasoline_demand, dxy_data, b
             "score": inv_score,
             "explanation": f"{'Sustained draws of {:.1f}M over 3 weeks — supply tightening, bullish.'.format(abs(change_3w)) if inv_score > 0 else 'Sustained builds of {:.1f}M over 3 weeks — supply growing, bearish.'.format(change_3w) if inv_score < 0 else '3-week inventory trend is flat — no supply signal.'}",
         })
-        analysis["factors"].append({"name": "Inventory", "score": inv_score, "weight": "20%"})
+        analysis["factors"].append({"name": "Inventory", "score": inv_score, "weight": "20%", "hint": "EIA weekly US crude oil stocks. Draws (falling) = supply tight = bullish. Builds (rising) = oversupply = bearish. Uses 3-week trend."})
     elif inventory_data and len(inventory_data) >= 2:
         latest_inv = inventory_data[0]["value"] / 1000
         prev_inv = inventory_data[1]["value"] / 1000
@@ -928,18 +928,18 @@ def _build_oil_analysis(wti_prices, inventory_data, gasoline_demand, dxy_data, b
             "score": inv_score,
             "explanation": f"{'Draw of {:.1f}M barrels — supply tightening.'.format(abs(change)) if change < 0 else 'Build of {:.1f}M barrels — supply growing.'.format(change)}",
         })
-        analysis["factors"].append({"name": "Inventory", "score": inv_score, "weight": "20%"})
+        analysis["factors"].append({"name": "Inventory", "score": inv_score, "weight": "20%", "hint": "EIA weekly US crude oil stocks. Draws (falling) = supply tight = bullish. Builds (rising) = oversupply = bearish. Uses 3-week trend."})
 
-    # Step 3: Gasoline Demand — relaxed thresholds
+    # Step 3: Gasoline Demand
     if gasoline_demand and len(gasoline_demand) >= 2:
         latest_gas = gasoline_demand[0]["value"]
         prev_gas = gasoline_demand[1]["value"]
         gas_chg = ((latest_gas - prev_gas) / prev_gas * 100) if prev_gas else 0
 
         gas_score = 0
-        if gas_chg > 1.5:
+        if gas_chg > 1:
             gas_score = 1
-        elif gas_chg < -1.5:
+        elif gas_chg < -1:
             gas_score = -1
 
         total_score += gas_score
@@ -951,7 +951,7 @@ def _build_oil_analysis(wti_prices, inventory_data, gasoline_demand, dxy_data, b
             "score": gas_score,
             "explanation": f"{'Rising demand supports oil prices.' if gas_score > 0 else 'Weakening demand pressures prices lower.' if gas_score < 0 else 'Demand holding steady.'}",
         })
-        analysis["factors"].append({"name": "Demand", "score": gas_score, "weight": "15%"})
+        analysis["factors"].append({"name": "Demand", "score": gas_score, "weight": "15%", "hint": "US gasoline demand (weekly EIA data). Rising demand supports oil prices. Falling demand = bearish. Threshold: >1% change."})
 
     # Step 4: US Dollar Impact
     if dxy_data:
@@ -973,7 +973,7 @@ def _build_oil_analysis(wti_prices, inventory_data, gasoline_demand, dxy_data, b
                 "score": dxy_score,
                 "explanation": f"{'Strong dollar makes oil more expensive globally, reducing demand.' if dxy_score < 0 else 'Weak dollar makes oil cheaper globally, boosting demand.' if dxy_score > 0 else 'Dollar neutral — no impact on oil pricing.'}",
             })
-            analysis["factors"].append({"name": "Dollar", "score": dxy_score, "weight": "15%"})
+            analysis["factors"].append({"name": "Dollar", "score": dxy_score, "weight": "15%", "hint": "US Dollar Index (DXY). Strong dollar makes oil expensive for foreign buyers = bearish. Weak dollar = bullish for oil."})
 
     # Step 5: WTI vs Brent Spread — relaxed thresholds
     if wti_prices and brent_value is not None:
@@ -996,7 +996,7 @@ def _build_oil_analysis(wti_prices, inventory_data, gasoline_demand, dxy_data, b
             "score": spread_score,
             "explanation": f"Wide spread (${spread:.1f}) — global supply tighter than US, bullish for WTI catch-up." if spread_score > 0 else ("Very narrow spread — global demand weak or US oversupplied." if spread_score < 0 else "Spread in normal range ($3-$6)."),
         })
-        analysis["factors"].append({"name": "Brent-WTI Spread", "score": spread_score, "weight": "10%"})
+        analysis["factors"].append({"name": "Brent-WTI Spread", "score": spread_score, "weight": "10%", "hint": "Gap between Brent and WTI prices. Wide spread (>$6) = global supply tighter than US = bullish for WTI. Narrow (<$1) = global weakness."})
 
     # Step 6: Mean Reversion — oil bounces after sharp weekly moves
     if wti_prices and len(wti_prices) >= 5:
@@ -1023,7 +1023,7 @@ def _build_oil_analysis(wti_prices, inventory_data, gasoline_demand, dxy_data, b
             "score": revert_score,
             "explanation": f"{'Oil dropped sharply — historical pattern shows strong bounce-back probability.' if revert_score > 0 else 'Oil surged sharply — pullback risk elevated. Take profits or wait.' if revert_score < 0 else 'Weekly move within normal range. No mean-reversion signal.'}",
         })
-        analysis["factors"].append({"name": "Mean Reversion", "score": revert_score, "weight": "15%"})
+        analysis["factors"].append({"name": "Mean Reversion", "score": revert_score, "weight": "15%", "hint": "Oil tends to bounce after sharp drops and pull back after surges. >6% weekly rise = overbought (bearish). >6% weekly drop = oversold (bullish)."})
 
     # Step 7: News Sentiment (keyword-based)
     sent_score = 0
@@ -1041,7 +1041,7 @@ def _build_oil_analysis(wti_prices, inventory_data, gasoline_demand, dxy_data, b
             "score": sent_score,
             "explanation": f"{'Headlines skew bullish — supply disruption or demand strength dominating news.' if sent_score > 0 else 'Headlines skew bearish — oversupply, demand weakness, or peace signals.' if sent_score < 0 else 'Mixed headlines — no clear directional bias from news.'}",
         })
-        analysis["factors"].append({"name": "News Sentiment", "score": sent_score, "weight": "10%"})
+        analysis["factors"].append({"name": "News Sentiment", "score": sent_score, "weight": "10%", "hint": "Scans 15 oil headlines for supply disruption, conflict, and demand keywords. Bullish headlines (war, shortage) = bullish. Bearish (glut, recession) = bearish."})
 
     # Step 8: Polymarket Geopolitical Risk
     geo_score = 0
@@ -1068,7 +1068,7 @@ def _build_oil_analysis(wti_prices, inventory_data, gasoline_demand, dxy_data, b
             "score": geo_score,
             "explanation": f"{'HIGH geopolitical risk — conflict probabilities elevated. Supply disruption risk supports oil prices.' if geo_score >= 2 else 'Moderate geopolitical tension — some risk premium in oil.' if geo_score > 0 else 'Low geopolitical risk — peace/stability reduces oil risk premium.' if geo_score < 0 else 'Geopolitical risk at baseline levels — no abnormal risk premium.'}",
         })
-        analysis["factors"].append({"name": "Geopolitical", "score": geo_score, "weight": "10%"})
+        analysis["factors"].append({"name": "Geopolitical", "score": geo_score, "weight": "10%", "hint": "Live Polymarket prediction odds for wars, conflicts, and ceasefires. High conflict risk = supply disruption = bullish for oil. Peace = bearish."})
     else:
         # Fallback when Polymarket data unavailable
         analysis["steps"].append({
