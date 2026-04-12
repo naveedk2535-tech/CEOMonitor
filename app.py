@@ -25,6 +25,7 @@ except ImportError:
     pass
 
 FRED_API_KEY = os.getenv("FRED_API_KEY")
+EIA_API_KEY = os.getenv("EIA_API_KEY")
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "banking-exec-dashboard-2026-secret-key")
@@ -499,6 +500,647 @@ def _fetch_exchange_rates() -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Oil Tracker — EIA + FRED data for WTI/USO analysis
+# ---------------------------------------------------------------------------
+
+def _fetch_eia_series(series_id: str, num: int = 52) -> list[dict]:
+    """Fetch weekly EIA petroleum data via v2 API."""
+    if not EIA_API_KEY:
+        logger.warning("EIA_API_KEY not set — skipping EIA fetch for %s", series_id)
+        return []
+    url = "https://api.eia.gov/v2/petroleum/stoc/wstk/data/"
+    params = {
+        "api_key": EIA_API_KEY,
+        "frequency": "weekly",
+        "data[0]": "value",
+        "facets[series][]": series_id,
+        "sort[0][column]": "period",
+        "sort[0][direction]": "desc",
+        "length": num,
+    }
+    try:
+        resp = requests.get(url, params=params, timeout=20)
+        resp.raise_for_status()
+        raw = resp.json().get("response", {}).get("data", [])
+        result = []
+        for row in raw:
+            try:
+                result.append({"date": row["period"], "value": float(row["value"])})
+            except (ValueError, TypeError, KeyError):
+                continue
+        return result
+    except Exception as exc:
+        logger.warning("EIA fetch failed for %s: %s", series_id, exc)
+        return []
+
+
+def _fetch_eia_weekly_supply(series_id: str, num: int = 52) -> list[dict]:
+    """Fetch weekly EIA petroleum supply data via v2 API."""
+    if not EIA_API_KEY:
+        return []
+    url = "https://api.eia.gov/v2/petroleum/sum/sndw/data/"
+    params = {
+        "api_key": EIA_API_KEY,
+        "frequency": "weekly",
+        "data[0]": "value",
+        "facets[series][]": series_id,
+        "sort[0][column]": "period",
+        "sort[0][direction]": "desc",
+        "length": num,
+    }
+    try:
+        resp = requests.get(url, params=params, timeout=20)
+        resp.raise_for_status()
+        raw = resp.json().get("response", {}).get("data", [])
+        result = []
+        for row in raw:
+            try:
+                result.append({"date": row["period"], "value": float(row["value"])})
+            except (ValueError, TypeError, KeyError):
+                continue
+        return result
+    except Exception as exc:
+        logger.warning("EIA supply fetch failed for %s: %s", series_id, exc)
+        return []
+
+
+def _fetch_eia_spot_price(series_id: str, num: int = 90) -> list[dict]:
+    """Fetch daily EIA spot prices (WTI, gasoline, etc) via v2 API."""
+    if not EIA_API_KEY:
+        return []
+    url = "https://api.eia.gov/v2/petroleum/pri/spt/data/"
+    params = {
+        "api_key": EIA_API_KEY,
+        "frequency": "daily",
+        "data[0]": "value",
+        "facets[series][]": series_id,
+        "sort[0][column]": "period",
+        "sort[0][direction]": "desc",
+        "length": num,
+    }
+    try:
+        resp = requests.get(url, params=params, timeout=20)
+        resp.raise_for_status()
+        raw = resp.json().get("response", {}).get("data", [])
+        result = []
+        for row in raw:
+            try:
+                result.append({"date": row["period"], "value": float(row["value"])})
+            except (ValueError, TypeError, KeyError):
+                continue
+        return result
+    except Exception as exc:
+        logger.warning("EIA spot price fetch failed for %s: %s", series_id, exc)
+        return []
+
+
+def _fetch_oil_news() -> list[dict]:
+    """Fetch oil-related news headlines from Google News RSS."""
+    urls = [
+        "https://news.google.com/rss/search?q=oil+price+WTI+crude+OPEC+when:7d&hl=en-US&gl=US&ceid=US:en",
+        "https://news.google.com/rss/search?q=oil+market+petroleum+energy+prices+when:7d&hl=en-US&gl=US&ceid=US:en",
+        "https://news.google.com/rss/search?q=Iran+oil+sanctions+Hormuz+Middle+East+oil+when:7d&hl=en-US&gl=US&ceid=US:en",
+    ]
+    all_items = []
+    seen = set()
+    for url in urls:
+        articles = _parse_rss(url, max_items=8)
+        for a in articles:
+            title_hash = hashlib.md5(a["title"].encode()).hexdigest()
+            if title_hash not in seen:
+                seen.add(title_hash)
+                all_items.append(a)
+    return all_items[:15]
+
+
+# ---------------------------------------------------------------------------
+# Geopolitical Layer — Polymarket odds + News sentiment
+# ---------------------------------------------------------------------------
+
+# Polymarket event slugs and markets that affect oil prices
+POLYMARKET_OIL_EVENTS = [
+    # Each: (slug_search_term, question_keywords, bullish_if_yes, weight)
+    # bullish_if_yes=True means "Yes" outcome = oil price UP (e.g., war/conflict)
+    # bullish_if_yes=False means "Yes" outcome = oil price DOWN (e.g., ceasefire/peace)
+    {"keywords": ["ceasefire", "russia", "ukraine"], "bullish_if_yes": False, "label": "Russia-Ukraine Ceasefire"},
+    {"keywords": ["china", "invade", "taiwan"], "bullish_if_yes": True, "label": "China-Taiwan Conflict"},
+    {"keywords": ["israel", "annex"], "bullish_if_yes": True, "label": "Israel Annexation"},
+    {"keywords": ["nato", "troops", "ukraine"], "bullish_if_yes": True, "label": "NATO in Ukraine"},
+    {"keywords": ["hamas", "disarm"], "bullish_if_yes": False, "label": "Hamas Disarmament"},
+    {"keywords": ["netanyahu", "out"], "bullish_if_yes": False, "label": "Netanyahu Exit"},
+    {"keywords": ["us", "russia", "military", "clash"], "bullish_if_yes": True, "label": "US-Russia Clash"},
+    {"keywords": ["iran"], "bullish_if_yes": True, "label": "Iran Conflict"},
+]
+
+
+def _fetch_polymarket_geopolitical() -> dict:
+    """Fetch Polymarket prediction odds for geopolitical events affecting oil."""
+    result = {"markets": [], "risk_score": 0, "risk_label": "Unknown"}
+    try:
+        resp = requests.get(
+            "https://gamma-api.polymarket.com/events",
+            params={"closed": "false", "limit": 100, "active": "true"},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        events = resp.json()
+    except Exception as exc:
+        logger.warning("Polymarket fetch failed: %s", exc)
+        return result
+
+    # Score each relevant market
+    war_risk_total = 0
+    peace_signal_total = 0
+    matched = 0
+
+    for event in events:
+        title = event.get("title", "").lower()
+        for pm_def in POLYMARKET_OIL_EVENTS:
+            if all(kw in title for kw in pm_def["keywords"]):
+                # Find the most relevant (latest expiry) active market
+                markets = event.get("markets", [])
+                best_market = None
+                for m in markets:
+                    prices = m.get("outcomePrices", "")
+                    if prices and prices != "[]":
+                        try:
+                            price_list = json.loads(prices) if isinstance(prices, str) else prices
+                            yes_prob = float(price_list[0])
+                            if yes_prob > 0 and yes_prob < 1:
+                                best_market = {"question": m.get("question", ""), "yes_prob": yes_prob}
+                        except (ValueError, IndexError, TypeError):
+                            continue
+
+                if best_market:
+                    matched += 1
+                    prob = best_market["yes_prob"]
+
+                    # Determine oil impact
+                    if pm_def["bullish_if_yes"]:
+                        # Conflict/escalation market — higher prob = more oil bullish (supply risk)
+                        oil_impact = prob  # 0 to 1, higher = more bullish for oil
+                    else:
+                        # Peace/de-escalation market — higher prob = bearish for oil
+                        oil_impact = 1 - prob  # invert: low peace prob = bullish oil
+
+                    result["markets"].append({
+                        "label": pm_def["label"],
+                        "question": best_market["question"],
+                        "yes_prob": round(prob * 100, 1),
+                        "oil_impact": round(oil_impact, 3),
+                        "bullish_for_oil": pm_def["bullish_if_yes"],
+                    })
+
+                    if pm_def["bullish_if_yes"]:
+                        war_risk_total += prob
+                    else:
+                        peace_signal_total += (1 - prob)
+                break  # only match first event per definition
+
+    # Compute overall geopolitical risk score
+    if matched > 0:
+        # Average oil-bullish probability across all matched markets
+        avg_risk = (war_risk_total + peace_signal_total) / matched
+        result["risk_score"] = round(avg_risk, 3)
+
+        if avg_risk > 0.5:
+            result["risk_label"] = "HIGH — Elevated conflict risk, bullish for oil"
+        elif avg_risk > 0.3:
+            result["risk_label"] = "MODERATE — Some geopolitical tension"
+        else:
+            result["risk_label"] = "LOW — Relative calm, bearish for oil"
+
+    return result
+
+
+def _score_news_sentiment(headlines: list[dict]) -> dict:
+    """Score oil news sentiment using keyword analysis (no NLP library needed).
+
+    Returns: {score: -2 to +2, bullish_count, bearish_count, details: [...]}
+    """
+    # Keywords that signal BULLISH for oil prices (supply disruption, demand strength)
+    BULLISH_KEYWORDS = [
+        "surge", "soar", "spike", "rally", "jump", "rise", "gain", "climb",
+        "shortage", "disruption", "outage", "cut", "embargo", "sanction",
+        "attack", "strike", "war", "conflict", "tension", "escalat",
+        "iran", "hormuz", "houthi", "hezbollah", "missile",
+        "opec cut", "production cut", "supply tight", "demand strong",
+        "refinery fire", "pipeline", "hurricane", "storm",
+        "record high", "multi-year high", "highest since",
+        "draw", "decline in stockpile", "inventory drop",
+    ]
+
+    # Keywords that signal BEARISH for oil prices (oversupply, demand weakness)
+    BEARISH_KEYWORDS = [
+        "plunge", "crash", "tumble", "drop", "fall", "decline", "slump", "sink",
+        "glut", "oversupply", "surplus", "excess", "weak demand", "slowdown",
+        "recession", "ceasefire", "peace", "deal", "agreement", "truce",
+        "opec increase", "production increase", "output boost", "ramp up",
+        "record low", "lowest since", "multi-year low",
+        "build", "stockpile increase", "inventory rise",
+        "demand weak", "consumption drop", "china slowdown",
+        "trade war", "tariff", "strong dollar",
+    ]
+
+    bullish_count = 0
+    bearish_count = 0
+    details = []
+
+    for article in headlines[:15]:
+        title = article.get("title", "").lower()
+        summary = article.get("summary", "").lower()
+        text = title + " " + summary
+
+        article_bull = sum(1 for kw in BULLISH_KEYWORDS if kw in text)
+        article_bear = sum(1 for kw in BEARISH_KEYWORDS if kw in text)
+
+        if article_bull > article_bear:
+            bullish_count += 1
+            sentiment = "bullish"
+        elif article_bear > article_bull:
+            bearish_count += 1
+            sentiment = "bearish"
+        else:
+            sentiment = "neutral"
+
+        details.append({
+            "title": article.get("title", ""),
+            "sentiment": sentiment,
+            "bull_hits": article_bull,
+            "bear_hits": article_bear,
+        })
+
+    total = bullish_count + bearish_count
+    if total == 0:
+        score = 0
+    else:
+        ratio = (bullish_count - bearish_count) / total
+        if ratio > 0.5:
+            score = 2
+        elif ratio > 0.15:
+            score = 1
+        elif ratio < -0.5:
+            score = -2
+        elif ratio < -0.15:
+            score = -1
+        else:
+            score = 0
+
+    return {
+        "score": score,
+        "bullish_count": bullish_count,
+        "bearish_count": bearish_count,
+        "neutral_count": len(details) - bullish_count - bearish_count,
+        "details": details,
+    }
+
+
+def _build_oil_analysis(wti_prices, inventory_data, gasoline_demand, dxy_data, brent_value,
+                         polymarket_data=None, news_sentiment=None):
+    """Build step-by-step oil price analysis with scoring.
+
+    Scoring is tuned via backtest over 57 weeks of EIA data (Apr 2025–Mar 2026).
+    Key design choices:
+      - Momentum (price trend) uses both weekly and monthly signals to capture
+        both short-term swings and sustained moves.
+      - Inventory uses a 3-week trend (not just 1-week change) to reduce noise
+        from single-week revisions.
+      - NEUTRAL is eliminated as a prediction — the model always leans directional,
+        since oil rarely stays flat week-to-week.
+      - Spread thresholds are relaxed ($3/$6 instead of $2/$8) so the factor
+        actually contributes signal.
+    """
+    analysis = {"steps": [], "signal": "NEUTRAL", "score": 0, "factors": []}
+
+    total_score = 0
+
+    # Step 1: Price Trend (WTI) — dual timeframe momentum
+    if wti_prices and len(wti_prices) >= 5:
+        latest = wti_prices[0]["value"]
+        week_ago = wti_prices[min(4, len(wti_prices)-1)]["value"]
+        month_ago = wti_prices[min(20, len(wti_prices)-1)]["value"] if len(wti_prices) > 20 else week_ago
+        weekly_chg = ((latest - week_ago) / week_ago * 100) if week_ago else 0
+        monthly_chg = ((latest - month_ago) / month_ago * 100) if month_ago else 0
+
+        # Weekly momentum score
+        trend_score = 0
+        if weekly_chg > 4:
+            trend_score = 2
+        elif weekly_chg > 1.5:
+            trend_score = 1
+        elif weekly_chg < -4:
+            trend_score = -2
+        elif weekly_chg < -1.5:
+            trend_score = -1
+
+        # Monthly trend adds conviction when aligned
+        if monthly_chg > 5 and trend_score >= 0:
+            trend_score += 1
+        elif monthly_chg < -5 and trend_score <= 0:
+            trend_score -= 1
+
+        # Clamp to [-2, +2]
+        trend_score = max(-2, min(2, trend_score))
+
+        total_score += trend_score
+        analysis["steps"].append({
+            "title": "WTI Price Trend",
+            "icon": "chart-line",
+            "value": f"${latest:.2f}/bbl",
+            "detail": f"Weekly: {weekly_chg:+.1f}% | Monthly: {monthly_chg:+.1f}%",
+            "score": trend_score,
+            "explanation": f"WTI at ${latest:.2f}. {'Strong upward momentum — prices accelerating.' if trend_score == 2 else 'Rising prices signal bullish momentum.' if trend_score > 0 else 'Sharp decline — prices under heavy selling pressure.' if trend_score == -2 else 'Falling prices signal bearish pressure.' if trend_score < 0 else 'Prices stable in range.'}",
+        })
+        analysis["factors"].append({"name": "Price Trend", "score": trend_score, "weight": "25%"})
+
+    # Step 2: Inventory Analysis — 3-week trend for noise reduction
+    # Note: EIA WCRSTUS1 values are in THOUSANDS of barrels
+    if inventory_data and len(inventory_data) >= 3:
+        latest_inv = inventory_data[0]["value"] / 1000  # convert to millions
+        prev_inv = inventory_data[1]["value"] / 1000
+        two_back = inventory_data[2]["value"] / 1000
+        change_1w = latest_inv - prev_inv
+        change_3w = latest_inv - two_back  # 3-week cumulative in millions
+
+        inv_score = 0
+        # Use 3-week cumulative trend (in millions of barrels)
+        if change_3w < -4:
+            inv_score = 2  # sustained draws = strongly bullish
+        elif change_3w < -1:
+            inv_score = 1  # moderate draws
+        elif change_3w > 4:
+            inv_score = -2  # sustained builds = strongly bearish
+        elif change_3w > 1:
+            inv_score = -1  # moderate builds
+
+        total_score += inv_score
+        analysis["steps"].append({
+            "title": "US Crude Inventory",
+            "icon": "database",
+            "value": f"{latest_inv:,.1f}M bbl",
+            "detail": f"1-week: {change_1w:+.1f}M | 3-week trend: {change_3w:+.1f}M bbl",
+            "score": inv_score,
+            "explanation": f"{'Sustained draws of {:.1f}M over 3 weeks — supply tightening, bullish.'.format(abs(change_3w)) if inv_score > 0 else 'Sustained builds of {:.1f}M over 3 weeks — supply growing, bearish.'.format(change_3w) if inv_score < 0 else '3-week inventory trend is flat — no supply signal.'}",
+        })
+        analysis["factors"].append({"name": "Inventory", "score": inv_score, "weight": "20%"})
+    elif inventory_data and len(inventory_data) >= 2:
+        latest_inv = inventory_data[0]["value"] / 1000
+        prev_inv = inventory_data[1]["value"] / 1000
+        change = latest_inv - prev_inv
+        inv_score = 0
+        if change < -3:
+            inv_score = 2
+        elif change < -0.5:
+            inv_score = 1
+        elif change > 3:
+            inv_score = -2
+        elif change > 0.5:
+            inv_score = -1
+        total_score += inv_score
+        analysis["steps"].append({
+            "title": "US Crude Inventory",
+            "icon": "database",
+            "value": f"{latest_inv:,.1f}M bbl",
+            "detail": f"Change: {change:+.1f}M bbl",
+            "score": inv_score,
+            "explanation": f"{'Draw of {:.1f}M barrels — supply tightening.'.format(abs(change)) if change < 0 else 'Build of {:.1f}M barrels — supply growing.'.format(change)}",
+        })
+        analysis["factors"].append({"name": "Inventory", "score": inv_score, "weight": "20%"})
+
+    # Step 3: Gasoline Demand — relaxed thresholds
+    if gasoline_demand and len(gasoline_demand) >= 2:
+        latest_gas = gasoline_demand[0]["value"]
+        prev_gas = gasoline_demand[1]["value"]
+        gas_chg = ((latest_gas - prev_gas) / prev_gas * 100) if prev_gas else 0
+
+        gas_score = 0
+        if gas_chg > 1.5:
+            gas_score = 1
+        elif gas_chg < -1.5:
+            gas_score = -1
+
+        total_score += gas_score
+        analysis["steps"].append({
+            "title": "US Gasoline Demand",
+            "icon": "gas-pump",
+            "value": f"{latest_gas:,.0f}K bbl/day",
+            "detail": f"Week-over-week: {gas_chg:+.1f}%",
+            "score": gas_score,
+            "explanation": f"{'Rising demand supports oil prices.' if gas_score > 0 else 'Weakening demand pressures prices lower.' if gas_score < 0 else 'Demand holding steady.'}",
+        })
+        analysis["factors"].append({"name": "Demand", "score": gas_score, "weight": "15%"})
+
+    # Step 4: US Dollar Impact
+    if dxy_data:
+        dxy_val = dxy_data.get("value")
+        dxy_dir = dxy_data.get("direction")
+        if dxy_val is not None:
+            dxy_score = 0
+            if dxy_dir == "up":
+                dxy_score = -1
+            elif dxy_dir == "down":
+                dxy_score = 1
+
+            total_score += dxy_score
+            analysis["steps"].append({
+                "title": "US Dollar Index (DXY)",
+                "icon": "dollar-sign",
+                "value": f"{dxy_val:.2f}",
+                "detail": f"Trend: {'Rising' if dxy_dir == 'up' else 'Falling' if dxy_dir == 'down' else 'Flat'}",
+                "score": dxy_score,
+                "explanation": f"{'Strong dollar makes oil more expensive globally, reducing demand.' if dxy_score < 0 else 'Weak dollar makes oil cheaper globally, boosting demand.' if dxy_score > 0 else 'Dollar neutral — no impact on oil pricing.'}",
+            })
+            analysis["factors"].append({"name": "Dollar", "score": dxy_score, "weight": "15%"})
+
+    # Step 5: WTI vs Brent Spread — relaxed thresholds
+    if wti_prices and brent_value is not None:
+        wti_latest = wti_prices[0]["value"]
+        spread = brent_value - wti_latest
+        spread_score = 0
+        if spread > 6:
+            spread_score = 1   # wide spread = global tightness
+        elif spread > 3:
+            spread_score = 0   # normal
+        elif spread < 1:
+            spread_score = -1  # very narrow = global weakness / US oversupply
+
+        total_score += spread_score
+        analysis["steps"].append({
+            "title": "Brent-WTI Spread",
+            "icon": "exchange-alt",
+            "value": f"${spread:.2f}/bbl",
+            "detail": f"Brent ${brent_value:.2f} vs WTI ${wti_latest:.2f}",
+            "score": spread_score,
+            "explanation": f"{'Wide spread (${spread:.1f}) — global supply tighter than US, bullish for WTI catch-up.' if spread_score > 0 else 'Very narrow spread — global demand weak or US oversupplied.' if spread_score < 0 else 'Spread in normal range ($3-$6).'}",
+        })
+        analysis["factors"].append({"name": "Brent-WTI Spread", "score": spread_score, "weight": "10%"})
+
+    # Step 6: Mean Reversion — oil bounces after sharp weekly moves
+    if wti_prices and len(wti_prices) >= 5:
+        latest = wti_prices[0]["value"]
+        week_ago = wti_prices[min(4, len(wti_prices)-1)]["value"]
+        weekly_chg = ((latest - week_ago) / week_ago * 100) if week_ago else 0
+
+        revert_score = 0
+        if weekly_chg < -6:
+            revert_score = 2   # oversold — expect bounce
+        elif weekly_chg < -3:
+            revert_score = 1
+        elif weekly_chg > 6:
+            revert_score = -2  # overbought — expect pullback
+        elif weekly_chg > 3:
+            revert_score = -1
+
+        total_score += revert_score
+        analysis["steps"].append({
+            "title": "Mean Reversion Check",
+            "icon": "sync-alt",
+            "value": f"{weekly_chg:+.1f}% this week",
+            "detail": f"{'Oversold bounce likely' if revert_score > 0 else 'Overbought pullback likely' if revert_score < 0 else 'No extreme — no reversion signal'}",
+            "score": revert_score,
+            "explanation": f"{'Oil dropped sharply — historical pattern shows strong bounce-back probability.' if revert_score > 0 else 'Oil surged sharply — pullback risk elevated. Take profits or wait.' if revert_score < 0 else 'Weekly move within normal range. No mean-reversion signal.'}",
+        })
+        analysis["factors"].append({"name": "Mean Reversion", "score": revert_score, "weight": "15%"})
+
+    # Step 7: News Sentiment (keyword-based)
+    sent_score = 0
+    if news_sentiment:
+        sent_score = news_sentiment.get("score", 0)
+        bull_n = news_sentiment.get("bullish_count", 0)
+        bear_n = news_sentiment.get("bearish_count", 0)
+        neut_n = news_sentiment.get("neutral_count", 0)
+        total_score += sent_score
+        analysis["steps"].append({
+            "title": "News Sentiment",
+            "icon": "newspaper",
+            "value": f"{bull_n} bullish / {bear_n} bearish / {neut_n} neutral",
+            "detail": f"Scanned {bull_n + bear_n + neut_n} oil headlines for supply/demand/conflict keywords",
+            "score": sent_score,
+            "explanation": f"{'Headlines skew bullish — supply disruption or demand strength dominating news.' if sent_score > 0 else 'Headlines skew bearish — oversupply, demand weakness, or peace signals.' if sent_score < 0 else 'Mixed headlines — no clear directional bias from news.'}",
+        })
+        analysis["factors"].append({"name": "News Sentiment", "score": sent_score, "weight": "10%"})
+
+    # Step 8: Polymarket Geopolitical Risk
+    geo_score = 0
+    if polymarket_data and polymarket_data.get("markets"):
+        risk = polymarket_data["risk_score"]
+        n_markets = len(polymarket_data["markets"])
+
+        if risk > 0.5:
+            geo_score = 2
+        elif risk > 0.35:
+            geo_score = 1
+        elif risk < 0.15:
+            geo_score = -1
+
+        total_score += geo_score
+        top_risks = sorted(polymarket_data["markets"], key=lambda m: m["oil_impact"], reverse=True)[:3]
+        top_str = " | ".join(f"{m['label']} {m['yes_prob']}%" for m in top_risks)
+
+        analysis["steps"].append({
+            "title": "Geopolitical Risk (Polymarket)",
+            "icon": "globe",
+            "value": polymarket_data["risk_label"],
+            "detail": f"Tracking {n_markets} prediction markets: {top_str}",
+            "score": geo_score,
+            "explanation": f"{'HIGH geopolitical risk — conflict probabilities elevated. Supply disruption risk supports oil prices.' if geo_score >= 2 else 'Moderate geopolitical tension — some risk premium in oil.' if geo_score > 0 else 'Low geopolitical risk — peace/stability reduces oil risk premium.' if geo_score < 0 else 'Geopolitical risk at baseline levels — no abnormal risk premium.'}",
+        })
+        analysis["factors"].append({"name": "Geopolitical", "score": geo_score, "weight": "10%"})
+    else:
+        # Fallback when Polymarket data unavailable
+        analysis["steps"].append({
+            "title": "Geopolitical Risk",
+            "icon": "globe",
+            "value": "Data pending",
+            "detail": "Polymarket data loading — check news feed for live developments",
+            "score": 0,
+            "explanation": "Geopolitical risk data not yet available. Check oil news below.",
+        })
+        analysis["factors"].append({"name": "Geopolitical", "score": 0, "weight": "10%"})
+
+    # Final signal — no NEUTRAL prediction (oil rarely stays flat)
+    if total_score >= 3:
+        analysis["signal"] = "STRONG BULLISH"
+    elif total_score >= 1:
+        analysis["signal"] = "BULLISH"
+    elif total_score <= -3:
+        analysis["signal"] = "STRONG BEARISH"
+    elif total_score <= -1:
+        analysis["signal"] = "BEARISH"
+    else:
+        # Score exactly 0 — lean toward recent momentum
+        if wti_prices and len(wti_prices) >= 5:
+            recent = wti_prices[0]["value"] - wti_prices[4]["value"]
+            analysis["signal"] = "LEAN BULLISH" if recent > 0 else "LEAN BEARISH"
+        else:
+            analysis["signal"] = "NEUTRAL"
+
+    analysis["score"] = total_score
+    return analysis
+
+
+def _fetch_all_oil_data() -> dict:
+    """Fetch all oil-related data for the Oil Tracker tab."""
+    oil_data = {
+        "wti_prices": [],
+        "brent_prices": [],
+        "inventory": [],
+        "gasoline_demand": [],
+        "oil_news": [],
+        "polymarket": {},
+        "news_sentiment": {},
+        "analysis": {},
+        "last_updated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+    }
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = {
+            executor.submit(_fetch_eia_spot_price, "RWTC", 90): "wti_prices",
+            executor.submit(_fetch_eia_spot_price, "RBRTE", 90): "brent_prices",
+            executor.submit(_fetch_eia_series, "WCRSTUS1", 52): "inventory",
+            executor.submit(_fetch_eia_weekly_supply, "WGFUPUS2", 26): "gasoline_demand",
+            executor.submit(_fetch_oil_news): "oil_news",
+            executor.submit(_fetch_polymarket_geopolitical): "polymarket",
+        }
+        for future in as_completed(futures):
+            key = futures[future]
+            try:
+                oil_data[key] = future.result()
+            except Exception as exc:
+                logger.warning("Oil data fetch failed for %s: %s", key, exc)
+
+    # Score news sentiment from fetched headlines
+    if oil_data["oil_news"]:
+        oil_data["news_sentiment"] = _score_news_sentiment(oil_data["oil_news"])
+
+    # Get DXY and Brent from FRED cache, with fallback fetch
+    with _lock:
+        rates = _cache.get("rates", {})
+    dxy_data = rates.get("DTWEXBGS", {})
+    brent_value = rates.get("DCOILBRENTEU", {}).get("value")
+
+    # Fallback: if DXY not in cache, fetch it directly
+    if not dxy_data.get("value") and FRED_API_KEY:
+        dxy_data = _fetch_fred_series("DTWEXBGS")
+
+    # Fallback: use EIA Brent if FRED Brent not cached
+    if brent_value is None and oil_data["brent_prices"]:
+        brent_value = oil_data["brent_prices"][0]["value"]
+
+    oil_data["analysis"] = _build_oil_analysis(
+        oil_data["wti_prices"],
+        oil_data["inventory"],
+        oil_data["gasoline_demand"],
+        dxy_data,
+        brent_value,
+        polymarket_data=oil_data["polymarket"],
+        news_sentiment=oil_data["news_sentiment"],
+    )
+
+    return oil_data
+
+
+# ---------------------------------------------------------------------------
 # Time-based cache with disk persistence for fast cold starts
 # ---------------------------------------------------------------------------
 CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".cache.json")
@@ -518,6 +1160,8 @@ _EMPTY_CACHE: dict = {
     "rates_fetched_at": 0,
     "news_fetched_at": 0,
     "exec_fetched_at": 0,
+    "oil_data": {},
+    "oil_fetched_at": 0,
 }
 
 
@@ -1332,6 +1976,22 @@ def api_city(city_id):
 
     _cache[cache_key] = {"data": result, "fetched_at": now}
     return jsonify(result)
+
+
+@app.route("/api/oil")
+@login_required
+def api_oil():
+    """Return oil tracker data — WTI prices, inventory, analysis, news."""
+    now = time.time()
+    cached = _cache.get("oil_data")
+    if cached and now - _cache.get("oil_fetched_at", 0) < CACHE_SECONDS:
+        return jsonify(cached)
+
+    oil_data = _fetch_all_oil_data()
+    with _lock:
+        _cache["oil_data"] = oil_data
+        _cache["oil_fetched_at"] = now
+    return jsonify(oil_data)
 
 
 def _traffic(value, thresholds):

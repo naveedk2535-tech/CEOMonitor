@@ -68,7 +68,33 @@
         }
         .logout-btn:hover { background: rgba(239,68,68,0.25); border-color: var(--red); }
 
-        /* NAV TABS */
+        /* SUPER TABS (Economic / Oil) */
+        .super-tabs {
+            background: linear-gradient(135deg, #0f172a 0%, #111827 100%);
+            border-bottom: 2px solid var(--border);
+            display: flex; padding: 0 2rem; gap: 0;
+        }
+        .super-tab {
+            padding: 0.9rem 2.5rem; font-size: 0.95rem; font-weight: 700;
+            color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em;
+            cursor: pointer; border-bottom: 4px solid transparent;
+            white-space: nowrap; transition: all 0.25s;
+            position: relative;
+        }
+        .super-tab:hover {
+            color: var(--text-primary);
+            background: rgba(6,182,212,0.04);
+        }
+        .super-tab.active {
+            color: var(--accent-cyan);
+            border-bottom-color: var(--accent-cyan);
+            background: rgba(6,182,212,0.06);
+        }
+        .super-tab .super-icon {
+            margin-right: 0.5rem; font-size: 1rem;
+        }
+
+        /* SUB NAV TABS */
         .nav-tabs {
             background: linear-gradient(180deg, #111827 0%, #0f1729 100%);
             border-bottom: 2px solid var(--border);
@@ -95,6 +121,8 @@
 
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+        .super-content { display: none; }
+        .super-content.active { display: block; }
 
         /* LAYOUT */
         .container { max-width: 1500px; margin: 0 auto; padding: 1.5rem; }
@@ -507,8 +535,15 @@
     </div>
 </header>
 
-<!-- NAVIGATION -->
-<nav class="nav-tabs">
+<!-- SUPER TABS (Economic / Oil) -->
+<div class="super-tabs">
+    <div class="super-tab active" data-super="economic"><span class="super-icon">📊</span>Economic</div>
+    <div class="super-tab" data-super="oil"><span class="super-icon">🛢️</span>Oil Tracker</div>
+</div>
+
+<!-- ECONOMIC SUPER-SECTION -->
+<div class="super-content active" id="super-economic">
+<nav class="nav-tabs" id="economic-nav-tabs">
     <div class="nav-tab active" data-tab="brief">Executive Brief</div>
     <div class="nav-tab" data-tab="us">US Markets</div>
     <div class="nav-tab" data-tab="uk">UK Markets</div>
@@ -1709,6 +1744,8 @@
 
 </div><!-- /tab-ubl -->
 
+<!-- (Oil Tracker content is in super-oil section below) -->
+
 <!-- ================================================================== -->
 <!-- TAB 5: QUICK LINKS                                                 -->
 <!-- ================================================================== -->
@@ -1749,6 +1786,99 @@
 </div><!-- /tab-links -->
 
 </div><!-- /.container -->
+</div><!-- /super-economic -->
+
+<!-- ================================================================== -->
+<!-- OIL TRACKER SUPER-SECTION                                          -->
+<!-- ================================================================== -->
+<div class="super-content" id="super-oil">
+<div class="container">
+
+    <!-- Signal Banner -->
+    <div id="oilSignalBanner" style="background:linear-gradient(135deg, rgba(42,53,80,0.8), rgba(15,23,41,0.9)); border:2px solid var(--border); border-radius:16px; padding:1.5rem 2rem; margin-bottom:1.5rem; text-align:center; position:relative; overflow:hidden;">
+        <div style="position:absolute; inset:0; background:radial-gradient(circle at 30% 50%, rgba(234,179,8,0.08) 0%, transparent 60%);"></div>
+        <div style="position:relative; z-index:1;">
+            <div style="font-size:0.65rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-muted); margin-bottom:0.5rem;">Oil Price Direction Signal</div>
+            <div id="oilSignalText" style="font-size:2rem; font-weight:800; color:#eab308; letter-spacing:0.02em;">Loading...</div>
+            <div id="oilScoreText" style="font-size:0.85rem; color:var(--text-muted); margin-top:0.3rem;">Composite Score: --</div>
+            <div style="font-size:0.6rem; color:var(--text-muted); margin-top:0.5rem;">Based on EIA inventory, price trends, demand, dollar, spread & mean-reversion analysis</div>
+        </div>
+    </div>
+
+    <!-- Signal Gauge + Factors -->
+    <div style="display:flex; gap:1.5rem; flex-wrap:wrap; margin-bottom:1.5rem;">
+        <div style="flex:1; min-width:300px; background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:1.25rem;">
+            <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.75rem; font-weight:600;">Signal Gauge</div>
+            <div style="position:relative; height:60px;">
+                <canvas id="oilGaugeChart" height="60"></canvas>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.6rem; color:var(--text-muted); margin-top:0.25rem;">
+                <span>Strong Bearish</span><span>Bearish</span><span>Neutral</span><span>Bullish</span><span>Strong Bullish</span>
+            </div>
+        </div>
+        <div style="flex:1; min-width:300px; background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:1.25rem;">
+            <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.75rem; font-weight:600;">Factor Breakdown</div>
+            <div id="oilFactors" style="display:flex; flex-direction:column; gap:0.4rem;">
+                <div style="color:var(--text-muted); font-size:0.8rem;">Loading factors...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step-by-Step Analysis -->
+    <div class="expand-header" onclick="toggleExpand(this)" style="border-left:4px solid #eab308;">
+        <span class="eh-label">Step-by-Step Price Analysis — How, Why & When Oil Moves</span>
+        <span class="eh-toggle"><span class="eh-arrow">&#9660;</span></span>
+    </div>
+    <div class="expand-body">
+        <div id="oilSteps" style="background:var(--card-bg); border:1px solid var(--border); border-top:none; border-radius:0 0 12px 12px; padding:1rem 1.25rem;">
+            <div style="color:var(--text-muted); font-size:0.8rem; padding:1rem 0; text-align:center;">Loading analysis...</div>
+        </div>
+    </div>
+
+    <!-- Charts: WTI vs Brent + Inventory -->
+    <div style="display:flex; gap:1.5rem; flex-wrap:wrap; margin-top:1.5rem;">
+        <div style="flex:1; min-width:320px; background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:1.25rem;">
+            <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.75rem; font-weight:600;">WTI vs Brent — Daily Price (90 Days)</div>
+            <div style="position:relative; height:300px;">
+                <canvas id="oilPriceChart"></canvas>
+            </div>
+        </div>
+        <div style="flex:1; min-width:320px; background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:1.25rem;">
+            <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.75rem; font-weight:600;">US Crude Inventory (Weekly, 52 Weeks)</div>
+            <div style="position:relative; height:300px;">
+                <canvas id="oilInventoryChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts: Gasoline Demand + Spread -->
+    <div style="display:flex; gap:1.5rem; flex-wrap:wrap; margin-top:1.5rem;">
+        <div style="flex:1; min-width:320px; background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:1.25rem;">
+            <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.75rem; font-weight:600;">US Gasoline Demand (Weekly)</div>
+            <div style="position:relative; height:280px;">
+                <canvas id="oilDemandChart"></canvas>
+            </div>
+        </div>
+        <div style="flex:1; min-width:320px; background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:1.25rem;">
+            <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.75rem; font-weight:600;">Brent-WTI Spread ($/bbl)</div>
+            <div style="position:relative; height:280px;">
+                <canvas id="oilSpreadChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Oil News Feed -->
+    <div style="margin-top:1.5rem; background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:1.25rem;">
+        <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.75rem; font-weight:600;">Oil Market News</div>
+        <div id="oilNewsFeed" style="display:flex; flex-direction:column; gap:0.5rem;">
+            <div style="color:var(--text-muted); font-size:0.8rem; padding:0.5rem 0;">Loading news...</div>
+        </div>
+    </div>
+
+    <div id="oilLastUpdated" style="font-size:0.55rem; color:var(--text-muted); margin-top:0.75rem; text-align:right;">Last updated: pending</div>
+
+</div><!-- /.container -->
+</div><!-- /super-oil -->
 
 <!-- HISTORY MODAL -->
 <div class="modal-overlay" id="historyModal">
@@ -1846,7 +1976,19 @@
         document.getElementById('newspanel-' + tab).classList.add('active');
     }
 
-    // ---- Tab navigation ----
+    // ---- Super-tab navigation (Economic / Oil) ----
+    document.querySelectorAll('.super-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.super-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.super-content').forEach(c => c.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById('super-' + tab.dataset.super).classList.add('active');
+            // Auto-load oil data when switching to oil
+            if (tab.dataset.super === 'oil' && !oilDataLoaded) loadOilData();
+        });
+    });
+
+    // ---- Sub-tab navigation (within Economic) ----
     document.querySelectorAll('.nav-tab').forEach(tab => {
         tab.addEventListener('click', () => {
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
@@ -2115,6 +2257,374 @@
         } else {
             newsEl.innerHTML = '<div class="empty-state">No economy news found for this city in the past 7 days.</div>';
         }
+    }
+
+    // ---- Oil Tracker ----
+    let oilCharts = {};
+    let oilDataLoaded = false;
+
+    // Oil data loaded on super-tab switch (see super-tab handler above)
+
+    async function loadOilData() {
+        try {
+            const resp = await fetch('/api/oil');
+            const data = await resp.json();
+            oilDataLoaded = true;
+            renderOilDashboard(data);
+        } catch (err) {
+            document.getElementById('oilSignalText').textContent = 'Failed to load data';
+        }
+    }
+
+    function renderOilDashboard(data) {
+        const analysis = data.analysis || {};
+
+        // Signal banner
+        const signalText = document.getElementById('oilSignalText');
+        const scoreText = document.getElementById('oilScoreText');
+        const banner = document.getElementById('oilSignalBanner');
+
+        const signal = analysis.signal || 'NEUTRAL';
+        const score = analysis.score || 0;
+        signalText.textContent = signal;
+        scoreText.textContent = `Composite Score: ${score > 0 ? '+' : ''}${score} (range: -10 to +10)`;
+
+        const signalColors = {
+            'STRONG BULLISH': '#22c55e',
+            'BULLISH': '#86efac',
+            'NEUTRAL': '#eab308',
+            'BEARISH': '#f87171',
+            'STRONG BEARISH': '#ef4444',
+        };
+        signalText.style.color = signalColors[signal] || '#eab308';
+
+        // Gauge chart
+        renderGauge(score);
+
+        // Factor breakdown
+        const factorsEl = document.getElementById('oilFactors');
+        if (analysis.factors && analysis.factors.length > 0) {
+            factorsEl.innerHTML = analysis.factors.map(f => {
+                const color = f.score > 0 ? 'var(--green)' : f.score < 0 ? 'var(--red)' : 'var(--text-muted)';
+                const bar = f.score > 0 ? '+'.repeat(f.score) : f.score < 0 ? '-'.repeat(Math.abs(f.score)) : '~';
+                return `<div style="display:flex; align-items:center; gap:0.5rem; font-size:0.78rem;">
+                    <span style="width:110px; color:var(--text-primary); font-weight:500;">${f.name}</span>
+                    <span style="width:35px; color:${color}; font-weight:700; text-align:center;">${f.score > 0 ? '+' + f.score : f.score}</span>
+                    <div style="flex:1; height:8px; background:rgba(42,53,80,0.6); border-radius:4px; overflow:hidden;">
+                        <div style="width:${Math.abs(f.score) * 25}%; height:100%; background:${color}; border-radius:4px; ${f.score < 0 ? 'margin-left:auto;' : ''}"></div>
+                    </div>
+                    <span style="width:35px; font-size:0.65rem; color:var(--text-muted); text-align:right;">${f.weight}</span>
+                </div>`;
+            }).join('');
+        }
+
+        // Step-by-step analysis
+        const stepsEl = document.getElementById('oilSteps');
+        if (analysis.steps && analysis.steps.length > 0) {
+            stepsEl.innerHTML = analysis.steps.map((step, i) => {
+                const scoreColor = step.score > 0 ? 'var(--green)' : step.score < 0 ? 'var(--red)' : 'var(--text-muted)';
+                const scoreBg = step.score > 0 ? 'rgba(34,197,94,0.1)' : step.score < 0 ? 'rgba(248,113,113,0.1)' : 'rgba(42,53,80,0.3)';
+                const scoreLabel = step.score > 0 ? 'BULLISH' : step.score < 0 ? 'BEARISH' : 'NEUTRAL';
+                return `<div style="display:flex; gap:1rem; padding:1rem 0; ${i < analysis.steps.length - 1 ? 'border-bottom:1px solid rgba(42,53,80,0.5);' : ''}">
+                    <div style="flex-shrink:0; width:36px; height:36px; background:linear-gradient(135deg, rgba(234,179,8,0.15), rgba(234,179,8,0.05)); border:1px solid rgba(234,179,8,0.3); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:0.85rem; font-weight:800; color:#eab308;">${i + 1}</div>
+                    <div style="flex:1; min-width:0;">
+                        <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap; margin-bottom:0.3rem;">
+                            <span style="font-size:0.85rem; font-weight:700; color:var(--text-primary);">${step.title}</span>
+                            <span style="font-size:1rem; font-weight:800; color:var(--accent-cyan);">${step.value}</span>
+                            <span style="font-size:0.65rem; padding:0.15rem 0.5rem; border-radius:4px; background:${scoreBg}; color:${scoreColor}; font-weight:700;">${scoreLabel} (${step.score > 0 ? '+' : ''}${step.score})</span>
+                        </div>
+                        <div style="font-size:0.72rem; color:var(--text-muted); margin-bottom:0.25rem;">${step.detail}</div>
+                        <div style="font-size:0.78rem; color:var(--text-primary); line-height:1.5;">${step.explanation}</div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // WTI vs Brent price chart
+        if (data.wti_prices && data.wti_prices.length > 0) {
+            const wti = [...data.wti_prices].reverse();
+            const brent = data.brent_prices ? [...data.brent_prices].reverse() : [];
+
+            const datasets = [{
+                label: 'WTI Crude ($/bbl)',
+                data: wti.map(d => d.value),
+                borderColor: '#eab308',
+                backgroundColor: 'rgba(234,179,8,0.06)',
+                borderWidth: 2.5,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                fill: true,
+                tension: 0.3,
+            }];
+
+            if (brent.length > 0) {
+                datasets.push({
+                    label: 'Brent Crude ($/bbl)',
+                    data: brent.map(d => d.value),
+                    borderColor: '#06b6d4',
+                    backgroundColor: 'rgba(6,182,212,0.04)',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    fill: false,
+                    tension: 0.3,
+                    borderDash: [5, 3],
+                });
+            }
+
+            if (oilCharts.price) oilCharts.price.destroy();
+            oilCharts.price = new Chart(document.getElementById('oilPriceChart').getContext('2d'), {
+                type: 'line',
+                data: { labels: wti.map(d => d.date), datasets },
+                options: oilChartOptions('$/bbl', v => '$' + v.toFixed(2)),
+            });
+        }
+
+        // Inventory chart
+        if (data.inventory && data.inventory.length > 0) {
+            const inv = [...data.inventory].reverse();
+            if (oilCharts.inventory) oilCharts.inventory.destroy();
+            oilCharts.inventory = new Chart(document.getElementById('oilInventoryChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: inv.map(d => d.date),
+                    datasets: [{
+                        label: 'US Crude Stocks (M barrels)',
+                        data: inv.map(d => d.value),
+                        backgroundColor: inv.map((d, i) => {
+                            if (i === 0) return 'rgba(234,179,8,0.6)';
+                            return d.value > inv[i-1].value ? 'rgba(248,113,113,0.5)' : 'rgba(34,197,94,0.5)';
+                        }),
+                        borderColor: inv.map((d, i) => {
+                            if (i === 0) return '#eab308';
+                            return d.value > inv[i-1].value ? '#f87171' : '#22c55e';
+                        }),
+                        borderWidth: 1,
+                        borderRadius: 2,
+                    }]
+                },
+                options: oilChartOptions('M bbl', v => v.toFixed(1) + 'M'),
+            });
+        }
+
+        // Gasoline demand chart
+        if (data.gasoline_demand && data.gasoline_demand.length > 0) {
+            const gas = [...data.gasoline_demand].reverse();
+            if (oilCharts.demand) oilCharts.demand.destroy();
+            oilCharts.demand = new Chart(document.getElementById('oilDemandChart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: gas.map(d => d.date),
+                    datasets: [{
+                        label: 'Gasoline Demand (K bbl/day)',
+                        data: gas.map(d => d.value),
+                        borderColor: '#a78bfa',
+                        backgroundColor: 'rgba(167,139,250,0.08)',
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#a78bfa',
+                        fill: true,
+                        tension: 0.3,
+                    }]
+                },
+                options: oilChartOptions('K bbl/day', v => v.toLocaleString()),
+            });
+        }
+
+        // WTI-Brent spread chart
+        if (data.wti_prices && data.brent_prices && data.wti_prices.length > 0 && data.brent_prices.length > 0) {
+            const wti = [...data.wti_prices].reverse();
+            const brent = [...data.brent_prices].reverse();
+            const minLen = Math.min(wti.length, brent.length);
+            const spreadData = [];
+            const spreadLabels = [];
+            for (let i = 0; i < minLen; i++) {
+                spreadData.push((brent[i].value - wti[i].value).toFixed(2));
+                spreadLabels.push(wti[i].date);
+            }
+            if (oilCharts.spread) oilCharts.spread.destroy();
+            oilCharts.spread = new Chart(document.getElementById('oilSpreadChart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: spreadLabels,
+                    datasets: [{
+                        label: 'Brent-WTI Spread ($/bbl)',
+                        data: spreadData,
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245,158,11,0.08)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        fill: true,
+                        tension: 0.3,
+                    }]
+                },
+                options: oilChartOptions('$/bbl', v => '$' + Number(v).toFixed(2)),
+            });
+        }
+
+        // Polymarket geopolitical risk
+        const polyEl = document.getElementById('oilPolymarket');
+        if (data.polymarket && data.polymarket.markets && data.polymarket.markets.length > 0) {
+            const pm = data.polymarket;
+            const riskColor = pm.risk_score > 0.5 ? 'var(--red)' : pm.risk_score > 0.3 ? 'var(--yellow)' : 'var(--green)';
+            polyEl.innerHTML = `
+                <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.75rem; padding:0.5rem 0.75rem; background:rgba(42,53,80,0.4); border-radius:8px;">
+                    <div style="font-size:1.2rem; font-weight:800; color:${riskColor};">${(pm.risk_score * 100).toFixed(0)}%</div>
+                    <div>
+                        <div style="font-size:0.75rem; font-weight:600; color:var(--text-primary);">Risk Index</div>
+                        <div style="font-size:0.65rem; color:${riskColor};">${pm.risk_label}</div>
+                    </div>
+                </div>
+            ` + pm.markets.map(m => {
+                const impactColor = m.oil_impact > 0.5 ? 'var(--red)' : m.oil_impact > 0.3 ? 'var(--yellow)' : 'var(--green)';
+                return `<div style="display:flex; justify-content:space-between; align-items:center; padding:0.35rem 0; border-bottom:1px solid rgba(42,53,80,0.3); font-size:0.75rem;">
+                    <div style="flex:1; min-width:0;">
+                        <span style="color:var(--text-primary); font-weight:500;">${m.label}</span>
+                        <div style="font-size:0.6rem; color:var(--text-muted);">${m.question}</div>
+                    </div>
+                    <div style="text-align:right; flex-shrink:0; margin-left:0.5rem;">
+                        <div style="font-weight:700; color:${impactColor};">${m.yes_prob}%</div>
+                        <div style="font-size:0.55rem; color:var(--text-muted);">${m.bullish_for_oil ? 'Bullish if Yes' : 'Bearish if Yes'}</div>
+                    </div>
+                </div>`;
+            }).join('');
+        } else {
+            polyEl.innerHTML = '<div style="color:var(--text-muted); font-size:0.78rem;">No active prediction markets found.</div>';
+        }
+
+        // News sentiment analysis
+        const sentEl = document.getElementById('oilSentiment');
+        const sent = data.news_sentiment;
+        if (sent && (sent.bullish_count + sent.bearish_count + sent.neutral_count > 0)) {
+            const total = sent.bullish_count + sent.bearish_count + sent.neutral_count;
+            const sentColor = sent.score > 0 ? 'var(--green)' : sent.score < 0 ? 'var(--red)' : 'var(--yellow)';
+            const sentLabel = sent.score >= 2 ? 'STRONG BULLISH' : sent.score > 0 ? 'BULLISH' : sent.score <= -2 ? 'STRONG BEARISH' : sent.score < 0 ? 'BEARISH' : 'MIXED';
+            const bullPct = (sent.bullish_count / total * 100).toFixed(0);
+            const bearPct = (sent.bearish_count / total * 100).toFixed(0);
+            const neutPct = (sent.neutral_count / total * 100).toFixed(0);
+
+            sentEl.innerHTML = `
+                <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.5rem; padding:0.5rem 0.75rem; background:rgba(42,53,80,0.4); border-radius:8px;">
+                    <div style="font-size:0.85rem; font-weight:800; color:${sentColor};">${sentLabel}</div>
+                    <div style="font-size:0.65rem; color:var(--text-muted);">Score: ${sent.score > 0 ? '+' : ''}${sent.score} from ${total} headlines</div>
+                </div>
+                <div style="display:flex; gap:0.5rem; margin-bottom:0.5rem;">
+                    <div style="flex:1; text-align:center; padding:0.4rem; background:rgba(34,197,94,0.1); border-radius:6px; border:1px solid rgba(34,197,94,0.2);">
+                        <div style="font-size:1rem; font-weight:700; color:var(--green);">${sent.bullish_count}</div>
+                        <div style="font-size:0.6rem; color:var(--green);">Bullish (${bullPct}%)</div>
+                    </div>
+                    <div style="flex:1; text-align:center; padding:0.4rem; background:rgba(234,179,8,0.1); border-radius:6px; border:1px solid rgba(234,179,8,0.2);">
+                        <div style="font-size:1rem; font-weight:700; color:var(--yellow);">${sent.neutral_count}</div>
+                        <div style="font-size:0.6rem; color:var(--yellow);">Neutral (${neutPct}%)</div>
+                    </div>
+                    <div style="flex:1; text-align:center; padding:0.4rem; background:rgba(248,113,113,0.1); border-radius:6px; border:1px solid rgba(248,113,113,0.2);">
+                        <div style="font-size:1rem; font-weight:700; color:var(--red);">${sent.bearish_count}</div>
+                        <div style="font-size:0.6rem; color:var(--red);">Bearish (${bearPct}%)</div>
+                    </div>
+                </div>
+                <div style="height:8px; background:rgba(42,53,80,0.6); border-radius:4px; overflow:hidden; display:flex;">
+                    <div style="width:${bullPct}%; background:var(--green);"></div>
+                    <div style="width:${neutPct}%; background:var(--yellow);"></div>
+                    <div style="width:${bearPct}%; background:var(--red);"></div>
+                </div>
+            `;
+        } else {
+            sentEl.innerHTML = '<div style="color:var(--text-muted); font-size:0.78rem;">No sentiment data available.</div>';
+        }
+
+        // Oil news with sentiment tags
+        const newsEl = document.getElementById('oilNewsFeed');
+        const sentDetails = (sent && sent.details) ? sent.details : [];
+        if (data.oil_news && data.oil_news.length > 0) {
+            newsEl.innerHTML = data.oil_news.map((n, i) => {
+                const sd = sentDetails[i] || {};
+                const sentTag = sd.sentiment === 'bullish'
+                    ? '<span style="font-size:0.55rem; padding:0.1rem 0.35rem; border-radius:3px; background:rgba(34,197,94,0.15); color:var(--green); font-weight:600; margin-left:0.4rem;">BULLISH</span>'
+                    : sd.sentiment === 'bearish'
+                    ? '<span style="font-size:0.55rem; padding:0.1rem 0.35rem; border-radius:3px; background:rgba(248,113,113,0.15); color:var(--red); font-weight:600; margin-left:0.4rem;">BEARISH</span>'
+                    : '';
+                return `<div style="display:flex; gap:0.5rem; padding:0.5rem 0; border-bottom:1px solid rgba(42,53,80,0.4);">
+                    <div style="flex:1; min-width:0;">
+                        <a href="${n.link}" target="_blank" style="font-size:0.8rem; color:var(--accent-cyan); text-decoration:none; font-weight:500; line-height:1.4;">${n.title}</a>${sentTag}
+                        ${n.summary ? `<div style="font-size:0.7rem; color:var(--text-muted); margin-top:0.15rem; line-height:1.4;">${n.summary}</div>` : ''}
+                    </div>
+                    ${n.date ? `<div style="font-size:0.6rem; color:var(--text-muted); white-space:nowrap; flex-shrink:0;">${n.date.split(',').slice(0,2).join(',')}</div>` : ''}
+                </div>`;
+            }).join('');
+        } else {
+            newsEl.innerHTML = '<div style="color:var(--text-muted); font-size:0.8rem;">No oil news available.</div>';
+        }
+
+        document.getElementById('oilLastUpdated').textContent = 'Last updated: ' + (data.last_updated || 'pending');
+    }
+
+    function oilChartOptions(unit, tickCallback) {
+        return {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { labels: { color: '#94a3b8', font: { family: 'Inter', size: 11 } } },
+                tooltip: {
+                    backgroundColor: '#1a2235', titleColor: '#f1f5f9', bodyColor: '#f1f5f9',
+                    borderColor: '#2a3550', borderWidth: 1, padding: 10,
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#64748b', font: { family: 'Inter', size: 10 }, maxTicksLimit: 10, maxRotation: 45 },
+                    grid: { color: 'rgba(42,53,80,0.3)' }
+                },
+                y: {
+                    ticks: { color: '#64748b', font: { family: 'Inter', size: 11 }, callback: tickCallback },
+                    grid: { color: 'rgba(42,53,80,0.5)' }
+                }
+            }
+        };
+    }
+
+    function renderGauge(score) {
+        const canvas = document.getElementById('oilGaugeChart');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width = canvas.parentElement.clientWidth;
+        const h = canvas.height = 60;
+        ctx.clearRect(0, 0, w, h);
+
+        const pad = 20;
+        const barW = w - 2 * pad;
+        const barH = 16;
+        const barY = 15;
+
+        // Gradient bar
+        const grad = ctx.createLinearGradient(pad, 0, pad + barW, 0);
+        grad.addColorStop(0, '#ef4444');
+        grad.addColorStop(0.25, '#f87171');
+        grad.addColorStop(0.45, '#fbbf24');
+        grad.addColorStop(0.55, '#fbbf24');
+        grad.addColorStop(0.75, '#86efac');
+        grad.addColorStop(1, '#22c55e');
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.roundRect(pad, barY, barW, barH, 8);
+        ctx.fill();
+
+        // Pointer — map score (-10..+10) to position
+        const norm = (score + 10) / 20;  // 0..1
+        const px = pad + norm * barW;
+
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.moveTo(px - 6, barY + barH + 4);
+        ctx.lineTo(px + 6, barY + barH + 4);
+        ctx.lineTo(px, barY + barH - 2);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 11px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText((score > 0 ? '+' : '') + score, px, barY + barH + 18);
     }
 </script>
 </body>
