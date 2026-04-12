@@ -594,6 +594,29 @@ def _fetch_eia_spot_price(series_id: str, num: int = 90) -> list[dict]:
         return []
 
 
+def _fetch_yahoo_chart(symbol: str, range_str: str = "3mo", interval: str = "1d") -> list[dict]:
+    """Fetch daily price data from Yahoo Finance chart API (free, no key)."""
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+    params = {"range": range_str, "interval": interval}
+    headers = {"User-Agent": "CEOMonitor/1.0"}
+    try:
+        resp = requests.get(url, params=params, headers=headers, timeout=15)
+        resp.raise_for_status()
+        data = resp.json()
+        result = data.get("chart", {}).get("result", [{}])[0]
+        timestamps = result.get("timestamp", [])
+        closes = result.get("indicators", {}).get("quote", [{}])[0].get("close", [])
+        out = []
+        for ts, close in zip(timestamps, closes):
+            if close is not None:
+                date_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
+                out.append({"date": date_str, "value": round(close, 2)})
+        return out
+    except Exception as exc:
+        logger.warning("Yahoo Finance fetch failed for %s: %s", symbol, exc)
+        return []
+
+
 def _fetch_oil_news() -> list[dict]:
     """Fetch oil-related news headlines from Google News RSS."""
     urls = [
@@ -971,7 +994,7 @@ def _build_oil_analysis(wti_prices, inventory_data, gasoline_demand, dxy_data, b
             "value": f"${spread:.2f}/bbl",
             "detail": f"Brent ${brent_value:.2f} vs WTI ${wti_latest:.2f}",
             "score": spread_score,
-            "explanation": f"{'Wide spread (${spread:.1f}) — global supply tighter than US, bullish for WTI catch-up.' if spread_score > 0 else 'Very narrow spread — global demand weak or US oversupplied.' if spread_score < 0 else 'Spread in normal range ($3-$6).'}",
+            "explanation": f"Wide spread (${spread:.1f}) — global supply tighter than US, bullish for WTI catch-up." if spread_score > 0 else ("Very narrow spread — global demand weak or US oversupplied." if spread_score < 0 else "Spread in normal range ($3-$6)."),
         })
         analysis["factors"].append({"name": "Brent-WTI Spread", "score": spread_score, "weight": "10%"})
 
@@ -1084,6 +1107,7 @@ def _fetch_all_oil_data() -> dict:
     oil_data = {
         "wti_prices": [],
         "brent_prices": [],
+        "uso_prices": [],
         "inventory": [],
         "gasoline_demand": [],
         "oil_news": [],
@@ -1093,10 +1117,11 @@ def _fetch_all_oil_data() -> dict:
         "last_updated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
     }
 
-    with ThreadPoolExecutor(max_workers=8) as executor:
+    with ThreadPoolExecutor(max_workers=10) as executor:
         futures = {
             executor.submit(_fetch_eia_spot_price, "RWTC", 90): "wti_prices",
             executor.submit(_fetch_eia_spot_price, "RBRTE", 90): "brent_prices",
+            executor.submit(_fetch_yahoo_chart, "USO", "3mo", "1d"): "uso_prices",
             executor.submit(_fetch_eia_series, "WCRSTUS1", 52): "inventory",
             executor.submit(_fetch_eia_weekly_supply, "WGFUPUS2", 26): "gasoline_demand",
             executor.submit(_fetch_oil_news): "oil_news",

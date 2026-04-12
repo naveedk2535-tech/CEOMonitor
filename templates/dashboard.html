@@ -1867,9 +1867,37 @@
         </div>
     </div>
 
+    <!-- WTI vs USO Correlation — key prediction chart -->
+    <div style="margin-top:1.5rem; background:var(--card-bg); border:2px solid rgba(234,179,8,0.3); border-radius:12px; padding:1.25rem;">
+        <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.75rem;">
+            <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#eab308; font-weight:700;">WTI vs USO — Predictive Correlation (90 Days)</div>
+            <div style="font-size:0.6rem; color:var(--text-muted); padding:0.15rem 0.5rem; background:rgba(234,179,8,0.1); border-radius:4px;">WTI leads USO by 1-2 days</div>
+        </div>
+        <div style="position:relative; height:320px;">
+            <canvas id="oilWtiUsoChart"></canvas>
+        </div>
+        <div id="oilWtiUsoStats" style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:0.75rem;"></div>
+    </div>
+
+    <!-- Geopolitical Risk + News Sentiment -->
+    <div style="display:flex; gap:1.5rem; flex-wrap:wrap; margin-top:1.5rem;">
+        <div style="flex:1; min-width:320px; background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:1.25rem;">
+            <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.75rem; font-weight:600;">Geopolitical Risk (Polymarket Live Odds)</div>
+            <div id="oilPolymarket" style="display:flex; flex-direction:column; gap:0.5rem;">
+                <div style="color:var(--text-muted); font-size:0.8rem;">Loading prediction markets...</div>
+            </div>
+        </div>
+        <div style="flex:1; min-width:320px; background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:1.25rem;">
+            <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.75rem; font-weight:600;">News Sentiment Analysis</div>
+            <div id="oilSentiment" style="display:flex; flex-direction:column; gap:0.5rem;">
+                <div style="color:var(--text-muted); font-size:0.8rem;">Analyzing headlines...</div>
+            </div>
+        </div>
+    </div>
+
     <!-- Oil News Feed -->
     <div style="margin-top:1.5rem; background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:1.25rem;">
-        <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.75rem; font-weight:600;">Oil Market News</div>
+        <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.75rem; font-weight:600;">Oil Market News (with Sentiment)</div>
         <div id="oilNewsFeed" style="display:flex; flex-direction:column; gap:0.5rem;">
             <div style="color:var(--text-muted); font-size:0.8rem; padding:0.5rem 0;">Loading news...</div>
         </div>
@@ -2266,13 +2294,20 @@
     // Oil data loaded on super-tab switch (see super-tab handler above)
 
     async function loadOilData() {
+        let data;
         try {
             const resp = await fetch('/api/oil');
-            const data = await resp.json();
+            data = await resp.json();
             oilDataLoaded = true;
-            renderOilDashboard(data);
         } catch (err) {
             document.getElementById('oilSignalText').textContent = 'Failed to load data';
+            console.error('Oil API fetch failed:', err);
+            return;
+        }
+        try {
+            renderOilDashboard(data);
+        } catch (err) {
+            console.error('Oil render error:', err);
         }
     }
 
@@ -2462,6 +2497,152 @@
             });
         }
 
+        // WTI vs USO correlation chart
+        if (data.wti_prices && data.wti_prices.length > 0 && data.uso_prices && data.uso_prices.length > 0) {
+            const wti = [...data.wti_prices].reverse();
+            const uso = [...data.uso_prices].reverse();
+
+            // Align dates — use WTI dates as base, find matching USO prices
+            const usoMap = {};
+            uso.forEach(d => { usoMap[d.date] = d.value; });
+
+            const alignedDates = [];
+            const alignedWti = [];
+            const alignedUso = [];
+            wti.forEach(d => {
+                if (usoMap[d.date] !== undefined) {
+                    alignedDates.push(d.date);
+                    alignedWti.push(d.value);
+                    alignedUso.push(usoMap[d.date]);
+                }
+            });
+
+            if (alignedDates.length > 5) {
+                if (oilCharts.wtiUso) oilCharts.wtiUso.destroy();
+                oilCharts.wtiUso = new Chart(document.getElementById('oilWtiUsoChart').getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: alignedDates,
+                        datasets: [{
+                            label: 'WTI Crude ($/bbl)',
+                            data: alignedWti,
+                            borderColor: '#eab308',
+                            backgroundColor: 'rgba(234,179,8,0.06)',
+                            borderWidth: 2.5,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            fill: false,
+                            tension: 0.3,
+                            yAxisID: 'y',
+                        }, {
+                            label: 'USO ETF ($)',
+                            data: alignedUso,
+                            borderColor: '#a78bfa',
+                            backgroundColor: 'rgba(167,139,250,0.06)',
+                            borderWidth: 2.5,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            fill: false,
+                            tension: 0.3,
+                            yAxisID: 'y1',
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { labels: { color: '#94a3b8', font: { family: 'Inter', size: 11 } } },
+                            tooltip: {
+                                backgroundColor: '#1a2235', titleColor: '#f1f5f9', bodyColor: '#f1f5f9',
+                                borderColor: '#2a3550', borderWidth: 1, padding: 10,
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: '#64748b', font: { family: 'Inter', size: 10 }, maxTicksLimit: 10, maxRotation: 45 },
+                                grid: { color: 'rgba(42,53,80,0.3)' }
+                            },
+                            y: {
+                                type: 'linear', position: 'left',
+                                title: { display: true, text: 'WTI ($/bbl)', color: '#eab308', font: { family: 'Inter', size: 11 } },
+                                ticks: { color: '#eab308', font: { family: 'Inter', size: 10 }, callback: v => '$' + v },
+                                grid: { color: 'rgba(42,53,80,0.3)' }
+                            },
+                            y1: {
+                                type: 'linear', position: 'right',
+                                title: { display: true, text: 'USO ($)', color: '#a78bfa', font: { family: 'Inter', size: 11 } },
+                                ticks: { color: '#a78bfa', font: { family: 'Inter', size: 10 }, callback: v => '$' + v },
+                                grid: { drawOnChartArea: false }
+                            }
+                        }
+                    }
+                });
+
+                // Compute correlation stats
+                const n = alignedWti.length;
+                const wtiLast = alignedWti[n-1], wtiPrev = alignedWti[Math.max(0, n-6)];
+                const usoLast = alignedUso[n-1], usoPrev = alignedUso[Math.max(0, n-6)];
+                const wtiChg = ((wtiLast - wtiPrev) / wtiPrev * 100).toFixed(1);
+                const usoChg = ((usoLast - usoPrev) / usoPrev * 100).toFixed(1);
+
+                // Simple correlation coefficient
+                let sumXY = 0, sumX = 0, sumY = 0, sumX2 = 0, sumY2 = 0;
+                for (let i = 0; i < n; i++) {
+                    sumXY += alignedWti[i] * alignedUso[i];
+                    sumX += alignedWti[i];
+                    sumY += alignedUso[i];
+                    sumX2 += alignedWti[i] * alignedWti[i];
+                    sumY2 += alignedUso[i] * alignedUso[i];
+                }
+                const corr = (n * sumXY - sumX * sumY) / Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+
+                // WTI leads USO? Check if today's WTI move predicts tomorrow's USO move
+                let leadCorrect = 0, leadTotal = 0;
+                for (let i = 1; i < n - 1; i++) {
+                    const wtiMove = alignedWti[i] - alignedWti[i-1];
+                    const usoNextMove = alignedUso[i+1] - alignedUso[i];
+                    if (wtiMove !== 0 && usoNextMove !== 0) {
+                        leadTotal++;
+                        if ((wtiMove > 0 && usoNextMove > 0) || (wtiMove < 0 && usoNextMove < 0)) leadCorrect++;
+                    }
+                }
+                const leadPct = leadTotal > 0 ? (leadCorrect / leadTotal * 100).toFixed(0) : '?';
+
+                // USO prediction
+                const wtiToday = alignedWti[n-1];
+                const wtiYesterday = n > 1 ? alignedWti[n-2] : wtiToday;
+                const wtiDirection = wtiToday > wtiYesterday ? 'UP' : (wtiToday < wtiYesterday ? 'DOWN' : 'FLAT');
+                const usoPred = wtiDirection === 'UP' ? 'USO likely UP tomorrow' : (wtiDirection === 'DOWN' ? 'USO likely DOWN tomorrow' : 'USO likely FLAT');
+                const predColor = wtiDirection === 'UP' ? 'var(--green)' : (wtiDirection === 'DOWN' ? 'var(--red)' : 'var(--yellow)');
+
+                const statsEl = document.getElementById('oilWtiUsoStats');
+                statsEl.innerHTML = `
+                    <div style="flex:1; min-width:120px; text-align:center; padding:0.5rem; background:rgba(42,53,80,0.4); border-radius:8px;">
+                        <div style="font-size:0.6rem; color:var(--text-muted); text-transform:uppercase;">Correlation</div>
+                        <div style="font-size:1.1rem; font-weight:700; color:${corr > 0.9 ? 'var(--green)' : corr > 0.7 ? 'var(--yellow)' : 'var(--red)'};">${(corr * 100).toFixed(1)}%</div>
+                    </div>
+                    <div style="flex:1; min-width:120px; text-align:center; padding:0.5rem; background:rgba(42,53,80,0.4); border-radius:8px;">
+                        <div style="font-size:0.6rem; color:var(--text-muted); text-transform:uppercase;">WTI Leads USO</div>
+                        <div style="font-size:1.1rem; font-weight:700; color:${leadPct > 60 ? 'var(--green)' : 'var(--yellow)'};">${leadPct}% accuracy</div>
+                    </div>
+                    <div style="flex:1; min-width:120px; text-align:center; padding:0.5rem; background:rgba(42,53,80,0.4); border-radius:8px;">
+                        <div style="font-size:0.6rem; color:var(--text-muted); text-transform:uppercase;">WTI 5-Day</div>
+                        <div style="font-size:1.1rem; font-weight:700; color:${wtiChg > 0 ? 'var(--green)' : 'var(--red)'};">${wtiChg > 0 ? '+' : ''}${wtiChg}%</div>
+                    </div>
+                    <div style="flex:1; min-width:120px; text-align:center; padding:0.5rem; background:rgba(42,53,80,0.4); border-radius:8px;">
+                        <div style="font-size:0.6rem; color:var(--text-muted); text-transform:uppercase;">USO 5-Day</div>
+                        <div style="font-size:1.1rem; font-weight:700; color:${usoChg > 0 ? 'var(--green)' : 'var(--red)'};">${usoChg > 0 ? '+' : ''}${usoChg}%</div>
+                    </div>
+                    <div style="flex:1; min-width:180px; text-align:center; padding:0.5rem; background:rgba(234,179,8,0.1); border:1px solid rgba(234,179,8,0.3); border-radius:8px;">
+                        <div style="font-size:0.6rem; color:#eab308; text-transform:uppercase; font-weight:600;">USO Prediction</div>
+                        <div style="font-size:0.85rem; font-weight:700; color:${predColor};">${usoPred}</div>
+                        <div style="font-size:0.55rem; color:var(--text-muted);">Based on WTI ${wtiDirection} today (${leadPct}% historical lead accuracy)</div>
+                    </div>
+                `;
+            }
+        }
+
         // Polymarket geopolitical risk
         const polyEl = document.getElementById('oilPolymarket');
         if (data.polymarket && data.polymarket.markets && data.polymarket.markets.length > 0) {
@@ -2606,7 +2787,22 @@
 
         ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.roundRect(pad, barY, barW, barH, 8);
+        if (ctx.roundRect) {
+            ctx.roundRect(pad, barY, barW, barH, 8);
+        } else {
+            // Fallback for browsers without roundRect
+            const r = 8;
+            ctx.moveTo(pad + r, barY);
+            ctx.lineTo(pad + barW - r, barY);
+            ctx.quadraticCurveTo(pad + barW, barY, pad + barW, barY + r);
+            ctx.lineTo(pad + barW, barY + barH - r);
+            ctx.quadraticCurveTo(pad + barW, barY + barH, pad + barW - r, barY + barH);
+            ctx.lineTo(pad + r, barY + barH);
+            ctx.quadraticCurveTo(pad, barY + barH, pad, barY + barH - r);
+            ctx.lineTo(pad, barY + r);
+            ctx.quadraticCurveTo(pad, barY, pad + r, barY);
+            ctx.closePath();
+        }
         ctx.fill();
 
         // Pointer — map score (-10..+10) to position
