@@ -680,16 +680,24 @@ def _fetch_polymarket_geopolitical() -> dict:
         title = event.get("title", "").lower()
         for pm_def in POLYMARKET_OIL_EVENTS:
             if all(kw in title for kw in pm_def["keywords"]):
-                # Find the most relevant (latest expiry) active market
+                # Find the most relevant active market:
+                # Pick the one with latest end date that has a real probability (not 0 or 1)
                 markets = event.get("markets", [])
                 best_market = None
+                best_end = ""
                 for m in markets:
                     prices = m.get("outcomePrices", "")
                     if prices and prices != "[]":
                         try:
                             price_list = json.loads(prices) if isinstance(prices, str) else prices
                             yes_prob = float(price_list[0])
-                            if yes_prob > 0 and yes_prob < 1:
+                            # Skip expired/settled markets (prob exactly 0 or 1)
+                            if yes_prob <= 0.001 or yes_prob >= 0.999:
+                                continue
+                            # Pick market with latest end date for most forward-looking signal
+                            end_date = m.get("endDate", "") or ""
+                            if end_date > best_end or best_market is None:
+                                best_end = end_date
                                 best_market = {"question": m.get("question", ""), "yes_prob": yes_prob}
                         except (ValueError, IndexError, TypeError):
                             continue
@@ -1138,19 +1146,19 @@ def _fetch_all_oil_data() -> dict:
     if oil_data["oil_news"]:
         oil_data["news_sentiment"] = _score_news_sentiment(oil_data["oil_news"])
 
-    # Get DXY and Brent from FRED cache, with fallback fetch
+    # Get DXY from FRED cache, with fallback fetch
     with _lock:
         rates = _cache.get("rates", {})
     dxy_data = rates.get("DTWEXBGS", {})
-    brent_value = rates.get("DCOILBRENTEU", {}).get("value")
 
-    # Fallback: if DXY not in cache, fetch it directly
     if not dxy_data.get("value") and FRED_API_KEY:
         dxy_data = _fetch_fred_series("DTWEXBGS")
 
-    # Fallback: use EIA Brent if FRED Brent not cached
-    if brent_value is None and oil_data["brent_prices"]:
+    # Always prefer EIA Brent (daily, fresher) over FRED (5-day lag)
+    if oil_data["brent_prices"]:
         brent_value = oil_data["brent_prices"][0]["value"]
+    else:
+        brent_value = rates.get("DCOILBRENTEU", {}).get("value")
 
     oil_data["analysis"] = _build_oil_analysis(
         oil_data["wti_prices"],
