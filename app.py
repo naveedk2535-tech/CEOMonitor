@@ -611,6 +611,8 @@ def _fetch_yahoo_chart(symbol: str, range_str: str = "3mo", interval: str = "1d"
             if close is not None:
                 date_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
                 out.append({"date": date_str, "value": round(close, 2)})
+        # Return newest-first (consistent with scoring engine expectations)
+        out.reverse()
         return out
     except Exception as exc:
         logger.warning("Yahoo Finance fetch failed for %s: %s", symbol, exc)
@@ -1127,8 +1129,10 @@ def _fetch_all_oil_data() -> dict:
 
     with ThreadPoolExecutor(max_workers=10) as executor:
         futures = {
-            executor.submit(_fetch_eia_spot_price, "RWTC", 90): "wti_prices",
-            executor.submit(_fetch_eia_spot_price, "RBRTE", 90): "brent_prices",
+            # Use Yahoo Finance futures for WTI/Brent (real-time, matches oilprice.com)
+            # EIA spot prices have multi-day lag and diverge from traded futures
+            executor.submit(_fetch_yahoo_chart, "CL=F", "3mo", "1d"): "wti_prices",
+            executor.submit(_fetch_yahoo_chart, "BZ=F", "3mo", "1d"): "brent_prices",
             executor.submit(_fetch_yahoo_chart, "USO", "3mo", "1d"): "uso_prices",
             executor.submit(_fetch_eia_series, "WCRSTUS1", 52): "inventory",
             executor.submit(_fetch_eia_weekly_supply, "WGFUPUS2", 26): "gasoline_demand",
