@@ -829,7 +829,8 @@ def _score_news_sentiment(headlines: list[dict]) -> dict:
 
 
 def _build_oil_analysis(wti_prices, inventory_data, gasoline_demand, dxy_data, brent_value,
-                         polymarket_data=None, news_sentiment=None):
+                         polymarket_data=None, news_sentiment=None,
+                         eia_wti_spot=None, eia_brent_spot=None):
     """Build step-by-step oil price analysis with scoring.
 
     Scoring is tuned via backtest over 57 weeks of EIA data (Apr 2025–Mar 2026).
@@ -1008,7 +1009,38 @@ def _build_oil_analysis(wti_prices, inventory_data, gasoline_demand, dxy_data, b
         })
         analysis["factors"].append({"name": "Brent-WTI Spread", "score": spread_score, "weight": "10%", "hint": "Gap between Brent and WTI prices. Wide spread (>$6) = global supply tighter than US = bullish for WTI. Narrow (<$1) = global weakness."})
 
-    # Step 6: Mean Reversion — oil bounces after sharp weekly moves
+    # Step 6: Spot-Futures Divergence — EIA physical vs traded futures
+    # When EIA spot is much higher than futures, physical market is tighter than
+    # paper market expects → bullish. When spot is lower → bearish.
+    if eia_wti_spot and wti_prices and len(eia_wti_spot) >= 1 and len(wti_prices) >= 1:
+        eia_latest = eia_wti_spot[0]["value"]
+        futures_latest = wti_prices[0]["value"]
+        eia_date = eia_wti_spot[0]["date"]
+        futures_date = wti_prices[0]["date"]
+        divergence_pct = ((eia_latest - futures_latest) / futures_latest * 100)
+
+        div_score = 0
+        if divergence_pct > 10:
+            div_score = 2   # huge backwardation — physical extremely tight
+        elif divergence_pct > 4:
+            div_score = 1   # moderate backwardation — bullish
+        elif divergence_pct < -10:
+            div_score = -2  # deep contango — oversupply
+        elif divergence_pct < -4:
+            div_score = -1  # moderate contango — bearish
+
+        total_score += div_score
+        analysis["steps"].append({
+            "title": "Spot vs Futures Divergence",
+            "icon": "balance-scale",
+            "value": f"{divergence_pct:+.1f}%",
+            "detail": f"EIA Spot ${eia_latest:.2f} ({eia_date}) vs Futures ${futures_latest:.2f} ({futures_date})",
+            "score": div_score,
+            "explanation": f"{'Physical spot is ${:.0f} ABOVE futures — real supply tightness at Cushing. Strong bullish signal that futures will catch up.'.format(eia_latest - futures_latest) if div_score >= 2 else 'Spot premium over futures — physical market tighter than paper market expects. Bullish.' if div_score > 0 else 'Spot trading BELOW futures — physical oversupply or weak demand at delivery points. Bearish.' if div_score < 0 else 'Spot and futures roughly aligned — no divergence signal.'}",
+        })
+        analysis["factors"].append({"name": "Spot-Futures", "score": div_score, "weight": "10%", "hint": "Compares EIA Cushing spot price vs NYMEX futures. Spot > Futures = physical tightness = bullish. Spot < Futures = oversupply = bearish."})
+
+    # Step 7: Mean Reversion
     if wti_prices and len(wti_prices) >= 5:
         latest = wti_prices[0]["value"]
         week_ago = wti_prices[min(4, len(wti_prices)-1)]["value"]
@@ -1118,6 +1150,8 @@ def _fetch_all_oil_data() -> dict:
         "wti_prices": [],
         "brent_prices": [],
         "uso_prices": [],
+        "eia_wti_spot": [],
+        "eia_brent_spot": [],
         "inventory": [],
         "gasoline_demand": [],
         "oil_news": [],
@@ -1127,15 +1161,19 @@ def _fetch_all_oil_data() -> dict:
         "last_updated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
     }
 
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=12) as executor:
         futures = {
-            # Use Yahoo Finance futures for WTI/Brent (real-time, matches oilprice.com)
-            # EIA spot prices have multi-day lag and diverge from traded futures
+            # Yahoo Finance futures = real-time traded prices (matches oilprice.com)
             executor.submit(_fetch_yahoo_chart, "CL=F", "3mo", "1d"): "wti_prices",
             executor.submit(_fetch_yahoo_chart, "BZ=F", "3mo", "1d"): "brent_prices",
             executor.submit(_fetch_yahoo_chart, "USO", "3mo", "1d"): "uso_prices",
+            # EIA spot = Cushing physical delivery prices (can diverge from futures)
+            executor.submit(_fetch_eia_spot_price, "RWTC", 30): "eia_wti_spot",
+            executor.submit(_fetch_eia_spot_price, "RBRTE", 30): "eia_brent_spot",
+            # EIA fundamentals
             executor.submit(_fetch_eia_series, "WCRSTUS1", 52): "inventory",
             executor.submit(_fetch_eia_weekly_supply, "WGFUPUS2", 26): "gasoline_demand",
+            # Sentiment + geopolitics
             executor.submit(_fetch_oil_news): "oil_news",
             executor.submit(_fetch_polymarket_geopolitical): "polymarket",
         }
@@ -1172,6 +1210,8 @@ def _fetch_all_oil_data() -> dict:
         brent_value,
         polymarket_data=oil_data["polymarket"],
         news_sentiment=oil_data["news_sentiment"],
+        eia_wti_spot=oil_data.get("eia_wti_spot", []),
+        eia_brent_spot=oil_data.get("eia_brent_spot", []),
     )
 
     return oil_data
