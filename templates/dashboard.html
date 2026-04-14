@@ -1871,7 +1871,7 @@
     <div style="margin-top:1.5rem; background:var(--card-bg); border:2px solid rgba(234,179,8,0.3); border-radius:12px; padding:1.25rem;">
         <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.75rem;">
             <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#eab308; font-weight:700;">WTI vs USO — Predictive Correlation (90 Days)</div>
-            <div style="font-size:0.6rem; color:var(--text-muted); padding:0.15rem 0.5rem; background:rgba(234,179,8,0.1); border-radius:4px;">WTI leads USO by 1-2 days</div>
+            <div style="font-size:0.6rem; color:var(--text-muted); padding:0.15rem 0.5rem; background:rgba(234,179,8,0.1); border-radius:4px;">Same-day: ~87% match | Weekly trend: ~57% predictive</div>
         </div>
         <div style="position:relative; height:320px;">
             <canvas id="oilWtiUsoChart"></canvas>
@@ -2602,47 +2602,77 @@
                 }
                 const corr = (n * sumXY - sumX * sumY) / Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
 
-                // WTI leads USO? Check if today's WTI move predicts tomorrow's USO move
-                let leadCorrect = 0, leadTotal = 0;
-                for (let i = 1; i < n - 1; i++) {
+                // Same-day direction match (most reliable signal)
+                let sameDayCorrect = 0, sameDayTotal = 0;
+                for (let i = 1; i < n; i++) {
                     const wtiMove = alignedWti[i] - alignedWti[i-1];
-                    const usoNextMove = alignedUso[i+1] - alignedUso[i];
-                    if (wtiMove !== 0 && usoNextMove !== 0) {
-                        leadTotal++;
-                        if ((wtiMove > 0 && usoNextMove > 0) || (wtiMove < 0 && usoNextMove < 0)) leadCorrect++;
+                    const usoMove = alignedUso[i] - alignedUso[i-1];
+                    if (wtiMove !== 0 && usoMove !== 0) {
+                        sameDayTotal++;
+                        if ((wtiMove > 0 && usoMove > 0) || (wtiMove < 0 && usoMove < 0)) sameDayCorrect++;
                     }
                 }
-                const leadPct = leadTotal > 0 ? (leadCorrect / leadTotal * 100).toFixed(0) : '?';
+                const sameDayPct = sameDayTotal > 0 ? (sameDayCorrect / sameDayTotal * 100).toFixed(0) : '?';
 
-                // USO prediction
-                const wtiToday = alignedWti[n-1];
-                const wtiYesterday = n > 1 ? alignedWti[n-2] : wtiToday;
-                const wtiDirection = wtiToday > wtiYesterday ? 'UP' : (wtiToday < wtiYesterday ? 'DOWN' : 'FLAT');
-                const usoPred = wtiDirection === 'UP' ? 'USO likely UP tomorrow' : (wtiDirection === 'DOWN' ? 'USO likely DOWN tomorrow' : 'USO likely FLAT');
-                const predColor = wtiDirection === 'UP' ? 'var(--green)' : (wtiDirection === 'DOWN' ? 'var(--red)' : 'var(--yellow)');
+                // Weekly trend predicts USO next week (best lead signal)
+                let weekLeadCorrect = 0, weekLeadTotal = 0;
+                for (let i = 5; i < n - 5; i++) {
+                    const wtiWeek = alignedWti[i] - alignedWti[i-5];
+                    const usoNextWeek = alignedUso[Math.min(i+5, n-1)] - alignedUso[i];
+                    if (wtiWeek !== 0 && usoNextWeek !== 0) {
+                        weekLeadTotal++;
+                        if ((wtiWeek > 0 && usoNextWeek > 0) || (wtiWeek < 0 && usoNextWeek < 0)) weekLeadCorrect++;
+                    }
+                }
+                const weekLeadPct = weekLeadTotal > 0 ? (weekLeadCorrect / weekLeadTotal * 100).toFixed(0) : '?';
+
+                // USO beta to WTI (how much USO moves per $1 WTI move)
+                let wtiPcts = [], usoPcts = [];
+                for (let i = 1; i < n; i++) {
+                    if (alignedWti[i-1] > 0 && alignedUso[i-1] > 0) {
+                        wtiPcts.push((alignedWti[i] - alignedWti[i-1]) / alignedWti[i-1] * 100);
+                        usoPcts.push((alignedUso[i] - alignedUso[i-1]) / alignedUso[i-1] * 100);
+                    }
+                }
+                const avgWtiAbs = wtiPcts.reduce((s,v) => s + Math.abs(v), 0) / wtiPcts.length;
+                const avgUsoAbs = usoPcts.reduce((s,v) => s + Math.abs(v), 0) / usoPcts.length;
+                const beta = avgWtiAbs > 0 ? (avgUsoAbs / avgWtiAbs).toFixed(2) : '?';
+
+                // USO prediction based on WTI weekly trend (57% accuracy)
+                const wtiWeekTrend = alignedWti[n-1] - alignedWti[Math.max(0, n-6)];
+                const wtiWeekDir = wtiWeekTrend > 0 ? 'UP' : (wtiWeekTrend < 0 ? 'DOWN' : 'FLAT');
+                const usoPred = wtiWeekDir === 'UP' ? 'USO likely UP this week' : (wtiWeekDir === 'DOWN' ? 'USO likely DOWN this week' : 'USO direction unclear');
+                const predColor = wtiWeekDir === 'UP' ? 'var(--green)' : (wtiWeekDir === 'DOWN' ? 'var(--red)' : 'var(--yellow)');
 
                 const statsEl = document.getElementById('oilWtiUsoStats');
                 statsEl.innerHTML = `
-                    <div style="flex:1; min-width:120px; text-align:center; padding:0.5rem; background:rgba(42,53,80,0.4); border-radius:8px;">
-                        <div style="font-size:0.6rem; color:var(--text-muted); text-transform:uppercase;">Correlation</div>
-                        <div style="font-size:1.1rem; font-weight:700; color:${corr > 0.9 ? 'var(--green)' : corr > 0.7 ? 'var(--yellow)' : 'var(--red)'};">${(corr * 100).toFixed(1)}%</div>
+                    <div style="flex:1; min-width:110px; text-align:center; padding:0.5rem; background:rgba(42,53,80,0.4); border-radius:8px;">
+                        <div style="font-size:0.6rem; color:var(--text-muted); text-transform:uppercase;">Same-Day Match</div>
+                        <div style="font-size:1.1rem; font-weight:700; color:${sameDayPct > 80 ? 'var(--green)' : sameDayPct > 60 ? 'var(--yellow)' : 'var(--red)'};">${sameDayPct}%</div>
+                        <div style="font-size:0.5rem; color:var(--text-muted);">direction accuracy</div>
                     </div>
-                    <div style="flex:1; min-width:120px; text-align:center; padding:0.5rem; background:rgba(42,53,80,0.4); border-radius:8px;">
-                        <div style="font-size:0.6rem; color:var(--text-muted); text-transform:uppercase;">WTI Leads USO</div>
-                        <div style="font-size:1.1rem; font-weight:700; color:${leadPct > 60 ? 'var(--green)' : 'var(--yellow)'};">${leadPct}% accuracy</div>
+                    <div style="flex:1; min-width:110px; text-align:center; padding:0.5rem; background:rgba(42,53,80,0.4); border-radius:8px;">
+                        <div style="font-size:0.6rem; color:var(--text-muted); text-transform:uppercase;">Weekly Lead</div>
+                        <div style="font-size:1.1rem; font-weight:700; color:${weekLeadPct > 55 ? 'var(--green)' : 'var(--yellow)'};">${weekLeadPct}%</div>
+                        <div style="font-size:0.5rem; color:var(--text-muted);">WTI week predicts USO</div>
                     </div>
-                    <div style="flex:1; min-width:120px; text-align:center; padding:0.5rem; background:rgba(42,53,80,0.4); border-radius:8px;">
+                    <div style="flex:1; min-width:110px; text-align:center; padding:0.5rem; background:rgba(42,53,80,0.4); border-radius:8px;">
+                        <div style="font-size:0.6rem; color:var(--text-muted); text-transform:uppercase;">USO Beta</div>
+                        <div style="font-size:1.1rem; font-weight:700; color:var(--accent-cyan);">${beta}x</div>
+                        <div style="font-size:0.5rem; color:var(--text-muted);">USO moves per WTI $1</div>
+                    </div>
+                    <div style="flex:1; min-width:110px; text-align:center; padding:0.5rem; background:rgba(42,53,80,0.4); border-radius:8px;">
                         <div style="font-size:0.6rem; color:var(--text-muted); text-transform:uppercase;">WTI 5-Day</div>
                         <div style="font-size:1.1rem; font-weight:700; color:${wtiChg > 0 ? 'var(--green)' : 'var(--red)'};">${wtiChg > 0 ? '+' : ''}${wtiChg}%</div>
                     </div>
-                    <div style="flex:1; min-width:120px; text-align:center; padding:0.5rem; background:rgba(42,53,80,0.4); border-radius:8px;">
+                    <div style="flex:1; min-width:110px; text-align:center; padding:0.5rem; background:rgba(42,53,80,0.4); border-radius:8px;">
                         <div style="font-size:0.6rem; color:var(--text-muted); text-transform:uppercase;">USO 5-Day</div>
                         <div style="font-size:1.1rem; font-weight:700; color:${usoChg > 0 ? 'var(--green)' : 'var(--red)'};">${usoChg > 0 ? '+' : ''}${usoChg}%</div>
                     </div>
                     <div style="flex:1; min-width:180px; text-align:center; padding:0.5rem; background:rgba(234,179,8,0.1); border:1px solid rgba(234,179,8,0.3); border-radius:8px;">
-                        <div style="font-size:0.6rem; color:#eab308; text-transform:uppercase; font-weight:600;">USO Prediction</div>
+                        <div style="font-size:0.6rem; color:#eab308; text-transform:uppercase; font-weight:600;">USO Weekly Outlook</div>
                         <div style="font-size:0.85rem; font-weight:700; color:${predColor};">${usoPred}</div>
-                        <div style="font-size:0.55rem; color:var(--text-muted);">Based on WTI ${wtiDirection} today (${leadPct}% historical lead accuracy)</div>
+                        <div style="font-size:0.55rem; color:var(--text-muted);">WTI weekly trend ${wtiWeekDir} (${weekLeadPct}% hist. accuracy)</div>
                     </div>
                 `;
             }
