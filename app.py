@@ -1214,7 +1214,80 @@ def _fetch_all_oil_data() -> dict:
         eia_brent_spot=oil_data.get("eia_brent_spot", []),
     )
 
+    # Save daily snapshot for historical tracking (Polymarket + sentiment + prices)
+    _save_oil_snapshot(oil_data)
+
     return oil_data
+
+
+# ---------------------------------------------------------------------------
+# Oil Data History — daily snapshots for backtesting Polymarket/sentiment
+# ---------------------------------------------------------------------------
+OIL_HISTORY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "oil_history.json")
+
+
+def _save_oil_snapshot(oil_data: dict):
+    """Append a daily snapshot of oil signals data for future backtesting.
+
+    Saves one entry per calendar day. Each entry is compact (~1.5 KB):
+    prices, scores, Polymarket odds, sentiment, and the final signal.
+    Full year = ~530 KB.
+    """
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    # Build compact snapshot
+    analysis = oil_data.get("analysis", {})
+    snapshot = {
+        "date": today,
+        # Prices
+        "wti": oil_data["wti_prices"][0]["value"] if oil_data.get("wti_prices") else None,
+        "brent": oil_data["brent_prices"][0]["value"] if oil_data.get("brent_prices") else None,
+        "uso": oil_data["uso_prices"][0]["value"] if oil_data.get("uso_prices") else None,
+        "eia_wti": oil_data["eia_wti_spot"][0]["value"] if oil_data.get("eia_wti_spot") else None,
+        "eia_brent": oil_data["eia_brent_spot"][0]["value"] if oil_data.get("eia_brent_spot") else None,
+        # Inventory + demand
+        "inv": oil_data["inventory"][0]["value"] if oil_data.get("inventory") else None,
+        "gas_demand": oil_data["gasoline_demand"][0]["value"] if oil_data.get("gasoline_demand") else None,
+        # Signal output
+        "signal": analysis.get("signal"),
+        "score": analysis.get("score"),
+        "factors": {f["name"]: f["score"] for f in analysis.get("factors", [])},
+        # Polymarket odds (compact: label -> yes_prob)
+        "polymarket": {
+            m["label"]: m["yes_prob"]
+            for m in oil_data.get("polymarket", {}).get("markets", [])
+        },
+        "geo_risk": oil_data.get("polymarket", {}).get("risk_score"),
+        # News sentiment
+        "sentiment": {
+            "score": oil_data.get("news_sentiment", {}).get("score"),
+            "bull": oil_data.get("news_sentiment", {}).get("bullish_count"),
+            "bear": oil_data.get("news_sentiment", {}).get("bearish_count"),
+            "neut": oil_data.get("news_sentiment", {}).get("neutral_count"),
+        },
+    }
+
+    # Load existing history
+    try:
+        with open(OIL_HISTORY_FILE, "r") as f:
+            history = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        history = []
+
+    # Only one entry per day — replace if same date exists
+    history = [h for h in history if h.get("date") != today]
+    history.append(snapshot)
+
+    # Keep max 2 years of daily data (~400 KB)
+    if len(history) > 730:
+        history = history[-730:]
+
+    try:
+        with open(OIL_HISTORY_FILE, "w") as f:
+            json.dump(history, f, separators=(",", ":"))
+        logger.info("Oil snapshot saved for %s (%d total days)", today, len(history))
+    except Exception as exc:
+        logger.warning("Failed to save oil snapshot: %s", exc)
 
 
 # ---------------------------------------------------------------------------
@@ -2069,6 +2142,18 @@ def api_oil():
         _cache["oil_data"] = oil_data
         _cache["oil_fetched_at"] = now
     return jsonify(oil_data)
+
+
+@app.route("/api/oil/history")
+@login_required
+def api_oil_history():
+    """Return saved oil signal history for backtesting."""
+    try:
+        with open(OIL_HISTORY_FILE, "r") as f:
+            history = json.load(f)
+        return jsonify({"days": len(history), "history": history})
+    except (FileNotFoundError, json.JSONDecodeError):
+        return jsonify({"days": 0, "history": []})
 
 
 def _traffic(value, thresholds):
