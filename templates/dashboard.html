@@ -2638,11 +2638,38 @@
                 const avgUsoAbs = usoPcts.reduce((s,v) => s + Math.abs(v), 0) / usoPcts.length;
                 const beta = avgWtiAbs > 0 ? (avgUsoAbs / avgWtiAbs).toFixed(2) : '?';
 
-                // USO prediction based on WTI weekly trend (57% accuracy)
+                // USO outlook — combine momentum (5-day trend) with model signal
                 const wtiWeekTrend = alignedWti[n-1] - alignedWti[Math.max(0, n-6)];
                 const wtiWeekDir = wtiWeekTrend > 0 ? 'UP' : (wtiWeekTrend < 0 ? 'DOWN' : 'FLAT');
-                const usoPred = wtiWeekDir === 'UP' ? 'USO likely UP this week' : (wtiWeekDir === 'DOWN' ? 'USO likely DOWN this week' : 'USO direction unclear');
-                const predColor = wtiWeekDir === 'UP' ? 'var(--green)' : (wtiWeekDir === 'DOWN' ? 'var(--red)' : 'var(--yellow)');
+                const modelSignal = (analysis.signal || '').toUpperCase();
+                const modelBullish = modelSignal.includes('BULLISH');
+                const modelBearish = modelSignal.includes('BEARISH');
+                const momentumDown = wtiWeekDir === 'DOWN';
+                const momentumUp = wtiWeekDir === 'UP';
+
+                let usoPred, predColor, predNote;
+                if (modelBullish && momentumDown) {
+                    // Conflicting: model says bounce, momentum says still falling
+                    usoPred = 'BOUNCE EXPECTED — but momentum still down';
+                    predColor = '#eab308';
+                    predNote = `Model: ${modelSignal} vs 5-day trend: ${wtiChg}%. Fundamentals bullish but price hasn't turned yet.`;
+                } else if (modelBearish && momentumUp) {
+                    usoPred = 'PULLBACK RISK — despite upward momentum';
+                    predColor = '#eab308';
+                    predNote = `Model: ${modelSignal} vs 5-day trend: +${wtiChg}%. Fundamentals bearish but price still rising.`;
+                } else if (modelBullish && momentumUp) {
+                    usoPred = 'USO likely UP';
+                    predColor = 'var(--green)';
+                    predNote = `Model and momentum aligned bullish.`;
+                } else if (modelBearish && momentumDown) {
+                    usoPred = 'USO likely DOWN';
+                    predColor = 'var(--red)';
+                    predNote = `Model and momentum aligned bearish.`;
+                } else {
+                    usoPred = 'USO direction unclear';
+                    predColor = 'var(--text-muted)';
+                    predNote = `Mixed signals.`;
+                }
 
                 const statsEl = document.getElementById('oilWtiUsoStats');
                 statsEl.innerHTML = `
@@ -2669,10 +2696,10 @@
                         <div style="font-size:0.6rem; color:var(--text-muted); text-transform:uppercase;">USO 5-Day</div>
                         <div style="font-size:1.1rem; font-weight:700; color:${usoChg > 0 ? 'var(--green)' : 'var(--red)'};">${usoChg > 0 ? '+' : ''}${usoChg}%</div>
                     </div>
-                    <div style="flex:1; min-width:180px; text-align:center; padding:0.5rem; background:rgba(234,179,8,0.1); border:1px solid rgba(234,179,8,0.3); border-radius:8px;">
-                        <div style="font-size:0.6rem; color:#eab308; text-transform:uppercase; font-weight:600;">USO Weekly Outlook</div>
+                    <div style="flex:1; min-width:200px; text-align:center; padding:0.5rem; background:rgba(234,179,8,0.1); border:1px solid rgba(234,179,8,0.3); border-radius:8px;">
+                        <div style="font-size:0.6rem; color:#eab308; text-transform:uppercase; font-weight:600;">USO Outlook</div>
                         <div style="font-size:0.85rem; font-weight:700; color:${predColor};">${usoPred}</div>
-                        <div style="font-size:0.55rem; color:var(--text-muted);">WTI weekly trend ${wtiWeekDir} (${weekLeadPct}% hist. accuracy)</div>
+                        <div style="font-size:0.55rem; color:var(--text-muted); margin-top:0.2rem;">${predNote}</div>
                     </div>
                 `;
             }
