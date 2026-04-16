@@ -1801,6 +1801,7 @@
             <div style="font-size:0.65rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-muted); margin-bottom:0.5rem;">Oil Price Direction Signal</div>
             <div id="oilSignalText" style="font-size:2rem; font-weight:800; color:#eab308; letter-spacing:0.02em;">Loading...</div>
             <div id="oilScoreText" style="font-size:0.85rem; color:var(--text-muted); margin-top:0.3rem;">Composite Score: --</div>
+            <div id="oilSignalContext" style="display:none; margin-top:0.5rem; padding:0.5rem 1rem; border-radius:8px; font-size:0.72rem; line-height:1.5; max-width:600px; margin-left:auto; margin-right:auto;"></div>
             <div style="font-size:0.6rem; color:var(--text-muted); margin-top:0.5rem;">Based on EIA inventory, price trends, demand, dollar, spread & mean-reversion analysis</div>
         </div>
     </div>
@@ -2332,6 +2333,31 @@
             'STRONG BEARISH': '#ef4444',
         };
         signalText.style.color = signalColors[signal] || '#eab308';
+
+        // Context note — warn when model disagrees with price action
+        const contextEl = document.getElementById('oilSignalContext');
+        const trendFactor = (analysis.factors || []).find(f => f.name === 'Price Trend');
+        const trendScore = trendFactor ? trendFactor.score : 0;
+        const modelBull = signal.includes('BULLISH');
+        const modelBear = signal.includes('BEARISH');
+        const priceFalling = trendScore <= -1;
+        const priceRising = trendScore >= 1;
+
+        if (modelBull && priceFalling) {
+            contextEl.style.display = 'block';
+            contextEl.style.background = 'rgba(234,179,8,0.12)';
+            contextEl.style.border = '1px solid rgba(234,179,8,0.3)';
+            contextEl.style.color = '#eab308';
+            contextEl.innerHTML = '<strong>Fundamentals vs Price:</strong> Model says bullish based on supply draws, spot premium, and sentiment — but WTI is actively falling. This is a <strong>contrarian signal</strong>: fundamentals suggest a bounce, but wait for price to confirm the turn before acting.';
+        } else if (modelBear && priceRising) {
+            contextEl.style.display = 'block';
+            contextEl.style.background = 'rgba(248,113,113,0.12)';
+            contextEl.style.border = '1px solid rgba(248,113,113,0.3)';
+            contextEl.style.color = '#f87171';
+            contextEl.innerHTML = '<strong>Fundamentals vs Price:</strong> Model says bearish based on oversupply and weak demand — but WTI is still rising. Momentum may continue short-term. Watch for reversal signs before shorting.';
+        } else {
+            contextEl.style.display = 'none';
+        }
 
         // Gauge chart
         renderGauge(score);
