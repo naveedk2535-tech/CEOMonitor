@@ -620,21 +620,34 @@ def _fetch_yahoo_chart(symbol: str, range_str: str = "3mo", interval: str = "1d"
 
 
 def _fetch_oil_news() -> list[dict]:
-    """Fetch oil-related news headlines from Google News RSS."""
+    """Fetch oil-related news headlines from Google News RSS (last 2 days, sorted newest first)."""
     urls = [
-        "https://news.google.com/rss/search?q=oil+price+WTI+crude+OPEC+when:7d&hl=en-US&gl=US&ceid=US:en",
-        "https://news.google.com/rss/search?q=oil+market+petroleum+energy+prices+when:7d&hl=en-US&gl=US&ceid=US:en",
-        "https://news.google.com/rss/search?q=Iran+oil+sanctions+Hormuz+Middle+East+oil+when:7d&hl=en-US&gl=US&ceid=US:en",
+        "https://news.google.com/rss/search?q=oil+price+WTI+crude+OPEC+when:2d&hl=en-US&gl=US&ceid=US:en",
+        "https://news.google.com/rss/search?q=oil+market+petroleum+energy+prices+when:2d&hl=en-US&gl=US&ceid=US:en",
+        "https://news.google.com/rss/search?q=Iran+oil+sanctions+Hormuz+Middle+East+oil+when:2d&hl=en-US&gl=US&ceid=US:en",
     ]
     all_items = []
     seen = set()
     for url in urls:
-        articles = _parse_rss(url, max_items=8)
+        articles = _parse_rss(url, max_items=10)
         for a in articles:
             title_hash = hashlib.md5(a["title"].encode()).hexdigest()
             if title_hash not in seen:
                 seen.add(title_hash)
                 all_items.append(a)
+
+    # Sort by date descending (newest first) — parse RSS date formats
+    def _parse_date(article):
+        date_str = article.get("date", "")
+        for fmt in ("%a, %d %b %Y %H:%M:%S %Z", "%a, %d %b %Y %H:%M:%S %z",
+                     "%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%dT%H:%M:%SZ"):
+            try:
+                return datetime.strptime(date_str, fmt)
+            except (ValueError, TypeError):
+                continue
+        return datetime.min
+
+    all_items.sort(key=_parse_date, reverse=True)
     return all_items[:15]
 
 

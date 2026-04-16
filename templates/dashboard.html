@@ -1839,13 +1839,27 @@
     <!-- Charts: WTI vs Brent + Inventory -->
     <div style="display:flex; gap:1.5rem; flex-wrap:wrap; margin-top:1.5rem;">
         <div style="flex:1; min-width:320px; background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:1.25rem;">
-            <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.75rem; font-weight:600;">WTI vs Brent — Daily Price (90 Days)</div>
+            <div style="display:flex; align-items:center; gap:0.4rem; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.5rem; font-weight:600;">
+                WTI vs Brent — Daily Price (90 Days)
+                <span onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'" style="display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:rgba(6,182,212,0.15);border:1px solid rgba(6,182,212,0.4);color:var(--accent-cyan);font-size:0.55rem;font-weight:700;cursor:pointer;">?</span>
+                <div style="display:none;font-size:0.68rem;color:var(--text-secondary);text-transform:none;letter-spacing:0;font-weight:400;line-height:1.5;margin-top:0.3rem;padding:0.4rem 0.6rem;background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.2);border-radius:6px;">
+                    NYMEX WTI futures (gold) vs ICE Brent futures (blue dashed) from Yahoo Finance. When Brent pulls away from WTI, global supply is tighter. When they converge, markets are balanced.
+                </div>
+            </div>
+            <div id="oilPriceChartInfo" style="font-size:0.68rem; color:var(--text-muted); margin-bottom:0.5rem;"></div>
             <div style="position:relative; height:300px;">
                 <canvas id="oilPriceChart"></canvas>
             </div>
         </div>
         <div style="flex:1; min-width:320px; background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:1.25rem;">
-            <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.75rem; font-weight:600;">US Crude Inventory (Weekly, 52 Weeks)</div>
+            <div style="display:flex; align-items:center; gap:0.4rem; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.5rem; font-weight:600;">
+                US Crude Inventory (Weekly, 52 Weeks)
+                <span onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'" style="display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:rgba(6,182,212,0.15);border:1px solid rgba(6,182,212,0.4);color:var(--accent-cyan);font-size:0.55rem;font-weight:700;cursor:pointer;">?</span>
+                <div style="display:none;font-size:0.68rem;color:var(--text-secondary);text-transform:none;letter-spacing:0;font-weight:400;line-height:1.5;margin-top:0.3rem;padding:0.4rem 0.6rem;background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.2);border-radius:6px;">
+                    EIA weekly US commercial crude oil stocks (WCRSTUS1). Green bars = inventory drew down (bullish — tighter supply). Red bars = inventory built up (bearish — oversupply). Sustained draws push prices higher.
+                </div>
+            </div>
+            <div id="oilInventoryChartInfo" style="font-size:0.68rem; color:var(--text-muted); margin-bottom:0.5rem;"></div>
             <div style="position:relative; height:300px;">
                 <canvas id="oilInventoryChart"></canvas>
             </div>
@@ -1855,13 +1869,27 @@
     <!-- Charts: Gasoline Demand + Spread -->
     <div style="display:flex; gap:1.5rem; flex-wrap:wrap; margin-top:1.5rem;">
         <div style="flex:1; min-width:320px; background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:1.25rem;">
-            <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.75rem; font-weight:600;">US Gasoline Demand (Weekly)</div>
+            <div style="display:flex; align-items:center; gap:0.4rem; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.5rem; font-weight:600;">
+                US Gasoline Demand (Weekly)
+                <span onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'" style="display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:rgba(6,182,212,0.15);border:1px solid rgba(6,182,212,0.4);color:var(--accent-cyan);font-size:0.55rem;font-weight:700;cursor:pointer;">?</span>
+                <div style="display:none;font-size:0.68rem;color:var(--text-secondary);text-transform:none;letter-spacing:0;font-weight:400;line-height:1.5;margin-top:0.3rem;padding:0.4rem 0.6rem;background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.2);border-radius:6px;">
+                    EIA weekly US gasoline product supplied (WGFUPUS2) — a proxy for real consumer demand. Rising demand = more crude consumed = bullish for oil prices. Seasonal peaks in summer driving season.
+                </div>
+            </div>
+            <div id="oilDemandChartInfo" style="font-size:0.68rem; color:var(--text-muted); margin-bottom:0.5rem;"></div>
             <div style="position:relative; height:280px;">
                 <canvas id="oilDemandChart"></canvas>
             </div>
         </div>
         <div style="flex:1; min-width:320px; background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:1.25rem;">
-            <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.75rem; font-weight:600;">Brent-WTI Spread ($/bbl)</div>
+            <div style="display:flex; align-items:center; gap:0.4rem; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.5rem; font-weight:600;">
+                Brent-WTI Spread ($/bbl)
+                <span onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'" style="display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:rgba(6,182,212,0.15);border:1px solid rgba(6,182,212,0.4);color:var(--accent-cyan);font-size:0.55rem;font-weight:700;cursor:pointer;">?</span>
+                <div style="display:none;font-size:0.68rem;color:var(--text-secondary);text-transform:none;letter-spacing:0;font-weight:400;line-height:1.5;margin-top:0.3rem;padding:0.4rem 0.6rem;background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.2);border-radius:6px;">
+                    Brent price minus WTI price. Normal range is $3-$6. Widening spread (>$6) = global supply tighter than US = bullish for WTI to catch up. Narrowing (<$1) = global weakness or US oversupply.
+                </div>
+            </div>
+            <div id="oilSpreadChartInfo" style="font-size:0.68rem; color:var(--text-muted); margin-bottom:0.5rem;"></div>
             <div style="position:relative; height:280px;">
                 <canvas id="oilSpreadChart"></canvas>
             </div>
@@ -2444,6 +2472,16 @@
                 data: { labels: wti.map(d => d.date), datasets },
                 options: oilChartOptions('$/bbl', v => '$' + v.toFixed(2)),
             });
+
+            // Price chart trend info
+            const wtiNow = wti[wti.length-1].value, wtiWeekAgo = wti[Math.max(0, wti.length-6)].value;
+            const wtiPctChg = ((wtiNow - wtiWeekAgo) / wtiWeekAgo * 100).toFixed(1);
+            const brentNow = brent.length ? brent[brent.length-1].value : null;
+            const priceInfoEl = document.getElementById('oilPriceChartInfo');
+            if (priceInfoEl) {
+                priceInfoEl.innerHTML = `<span style="color:var(--text-primary);">WTI $${wtiNow.toFixed(2)}</span> <span style="color:${wtiPctChg>0?'var(--green)':'var(--red)'};">(${wtiPctChg>0?'+':''}${wtiPctChg}% 5d)</span>` +
+                    (brentNow ? ` | <span style="color:var(--text-primary);">Brent $${brentNow.toFixed(2)}</span> | Spread $${(brentNow-wtiNow).toFixed(2)}` : '');
+            }
         }
 
         // Inventory chart
@@ -2471,6 +2509,17 @@
                 },
                 options: oilChartOptions('M bbl', v => v.toFixed(1) + 'M'),
             });
+
+            // Inventory trend info
+            const invLatest = inv[inv.length-1].value;
+            const invPrev = inv.length > 1 ? inv[inv.length-2].value : invLatest;
+            const invChg = invLatest - invPrev;
+            const invInfoEl = document.getElementById('oilInventoryChartInfo');
+            if (invInfoEl) {
+                const invColor = invChg < 0 ? 'var(--green)' : invChg > 0 ? 'var(--red)' : 'var(--text-muted)';
+                const invWord = invChg < 0 ? 'Draw' : invChg > 0 ? 'Build' : 'Flat';
+                invInfoEl.innerHTML = `Latest: <span style="color:var(--text-primary);">${(invLatest/1000).toFixed(1)}M bbl</span> | Last week: <span style="color:${invColor};">${invWord} ${Math.abs(invChg/1000).toFixed(1)}M</span> — ${invChg < 0 ? 'supply tightening (bullish)' : invChg > 0 ? 'supply growing (bearish)' : 'no change'}`;
+            }
         }
 
         // Gasoline demand chart
@@ -2495,6 +2544,16 @@
                 },
                 options: oilChartOptions('K bbl/day', v => v.toLocaleString()),
             });
+
+            // Demand trend info
+            const gasLatest = gas[gas.length-1].value;
+            const gasPrev = gas.length > 1 ? gas[gas.length-2].value : gasLatest;
+            const gasChgPct = ((gasLatest - gasPrev) / gasPrev * 100).toFixed(1);
+            const demandInfoEl = document.getElementById('oilDemandChartInfo');
+            if (demandInfoEl) {
+                const gasColor = gasChgPct > 0 ? 'var(--green)' : gasChgPct < 0 ? 'var(--red)' : 'var(--text-muted)';
+                demandInfoEl.innerHTML = `Latest: <span style="color:var(--text-primary);">${gasLatest.toLocaleString()}K bbl/day</span> | WoW: <span style="color:${gasColor};">${gasChgPct>0?'+':''}${gasChgPct}%</span> — ${gasChgPct > 1 ? 'rising demand (bullish)' : gasChgPct < -1 ? 'falling demand (bearish)' : 'stable demand'}`;
+            }
         }
 
         // WTI-Brent spread chart
@@ -2526,6 +2585,15 @@
                 },
                 options: oilChartOptions('$/bbl', v => '$' + Number(v).toFixed(2)),
             });
+
+            // Spread trend info
+            const spNow = Number(spreadData[spreadData.length-1]);
+            const spAvg = spreadData.reduce((s,v) => s + Number(v), 0) / spreadData.length;
+            const spreadInfoEl = document.getElementById('oilSpreadChartInfo');
+            if (spreadInfoEl) {
+                const spColor = spNow > 6 ? 'var(--green)' : spNow < 1 ? 'var(--red)' : 'var(--text-muted)';
+                spreadInfoEl.innerHTML = `Current: <span style="color:${spColor};">$${spNow.toFixed(2)}</span> | 90-day avg: $${spAvg.toFixed(2)} — ${spNow > 6 ? 'wide spread, global tightness (bullish for WTI)' : spNow < 1 ? 'very narrow, markets converged' : 'normal range ($3-$6)'}`;
+            }
         }
 
         // WTI vs USO correlation chart
