@@ -2395,19 +2395,29 @@
         if (analysis.factors && analysis.factors.length > 0) {
             factorsEl.innerHTML = analysis.factors.map((f, i) => {
                 const color = f.score > 0 ? 'var(--green)' : f.score < 0 ? 'var(--red)' : 'var(--text-muted)';
+                const fr = f.freshness || 'fresh';
+                const frColor = fr === 'fresh' ? 'var(--green)' : fr === 'aging' ? 'var(--yellow)' : 'var(--red)';
+                const frDot = fr !== 'fresh' ? `<span style="width:6px;height:6px;border-radius:50%;background:${frColor};display:inline-block;flex-shrink:0;" title="${f.data_age || '?'}d old"></span>` : '';
+                const decayed = f.raw_score !== undefined && f.raw_score !== f.score;
+                const decayNote = decayed ? ` <span style="font-size:0.55rem;color:var(--text-muted);">(was ${f.raw_score > 0 ? '+' : ''}${f.raw_score})</span>` : '';
                 return `<div style="font-size:0.78rem;">
                     <div style="display:flex; align-items:center; gap:0.5rem;">
-                        <span style="width:120px; color:var(--text-primary); font-weight:500; display:flex; align-items:center; gap:0.3rem;">
+                        <span style="width:130px; color:var(--text-primary); font-weight:500; display:flex; align-items:center; gap:0.3rem;">
                             ${f.name}
-                            <span onclick="toggleFactorHint(${i})" style="display:inline-flex; align-items:center; justify-content:center; width:15px; height:15px; border-radius:50%; background:rgba(6,182,212,0.15); border:1px solid rgba(6,182,212,0.4); color:var(--accent-cyan); font-size:0.55rem; font-weight:700; cursor:pointer; flex-shrink:0; transition:all 0.2s;">?</span>
+                            ${frDot}
+                            <span onclick="toggleFactorHint(${i})" style="display:inline-flex; align-items:center; justify-content:center; width:15px; height:15px; border-radius:50%; background:rgba(6,182,212,0.15); border:1px solid rgba(6,182,212,0.4); color:var(--accent-cyan); font-size:0.55rem; font-weight:700; cursor:pointer; flex-shrink:0;">?</span>
                         </span>
-                        <span style="width:35px; color:${color}; font-weight:700; text-align:center;">${f.score > 0 ? '+' + f.score : f.score}</span>
+                        <span style="width:55px; color:${color}; font-weight:700; text-align:center;">${f.score > 0 ? '+' + f.score : f.score}${decayNote}</span>
                         <div style="flex:1; height:8px; background:rgba(42,53,80,0.6); border-radius:4px; overflow:hidden;">
                             <div style="width:${Math.abs(f.score) * 25}%; height:100%; background:${color}; border-radius:4px; ${f.score < 0 ? 'margin-left:auto;' : ''}"></div>
                         </div>
                         <span style="width:35px; font-size:0.65rem; color:var(--text-muted); text-align:right;">${f.weight}</span>
                     </div>
-                    <div id="factorHint${i}" style="display:none; margin:0.25rem 0 0.15rem 0; padding:0.4rem 0.6rem; background:rgba(6,182,212,0.08); border:1px solid rgba(6,182,212,0.2); border-radius:6px; font-size:0.68rem; color:var(--text-secondary); line-height:1.5;">${f.hint || ''}</div>
+                    <div id="factorHint${i}" style="display:none; margin:0.25rem 0 0.15rem 0; padding:0.4rem 0.6rem; background:rgba(6,182,212,0.08); border:1px solid rgba(6,182,212,0.2); border-radius:6px; font-size:0.68rem; color:var(--text-secondary); line-height:1.5;">
+                        ${f.hint || ''}
+                        ${f.data_age !== undefined ? `<br><span style="color:${frColor};">Data age: ${f.data_age} day${f.data_age !== 1 ? 's' : ''} (${fr})</span>` : ''}
+                        ${decayed ? `<br>Score reduced from ${f.raw_score > 0 ? '+' : ''}${f.raw_score} to ${f.score > 0 ? '+' : ''}${f.score} due to staleness.` : ''}
+                    </div>
                 </div>`;
             }).join('');
         }

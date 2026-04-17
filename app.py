@@ -841,21 +841,62 @@ def _score_news_sentiment(headlines: list[dict]) -> dict:
     }
 
 
+def _staleness_decay(data_date_str: str, expected_freq_days: int) -> tuple[float, int, str]:
+    """Calculate a decay multiplier based on how old the data is.
+
+    Args:
+        data_date_str: Date string (YYYY-MM-DD) of the data point
+        expected_freq_days: How often this data is expected to update (e.g. 1=daily, 7=weekly)
+
+    Returns:
+        (multiplier 0.0-1.0, age_days, freshness label)
+
+    Decay logic:
+        - Within expected frequency: 1.0 (full weight)
+        - 1-2x expected frequency: 0.75 (slightly stale)
+        - 2-3x expected frequency: 0.5 (stale)
+        - 3x+ expected frequency: 0.25 (very stale)
+    """
+    if not data_date_str:
+        return 0.25, 999, "unknown"
+    try:
+        data_date = datetime.strptime(data_date_str[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        age_days = (datetime.now(timezone.utc) - data_date).days
+    except (ValueError, TypeError):
+        return 0.25, 999, "unknown"
+
+    ratio = age_days / max(expected_freq_days, 1)
+
+    if ratio <= 1.2:
+        return 1.0, age_days, "fresh"
+    elif ratio <= 2.0:
+        return 0.75, age_days, "aging"
+    elif ratio <= 3.0:
+        return 0.5, age_days, "stale"
+    else:
+        return 0.25, age_days, "very stale"
+
+
+def _apply_decay(raw_score: int, decay: float) -> int:
+    """Apply staleness decay to a score, rounding toward zero."""
+    decayed = raw_score * decay
+    if raw_score > 0:
+        return max(0, int(decayed + 0.5))  # round, but floor at 0
+    elif raw_score < 0:
+        return min(0, -int(abs(decayed) + 0.5))
+    return 0
+
+
 def _build_oil_analysis(wti_prices, inventory_data, gasoline_demand, dxy_data, brent_value,
                          polymarket_data=None, news_sentiment=None,
                          eia_wti_spot=None, eia_brent_spot=None):
     """Build step-by-step oil price analysis with scoring.
 
-    Scoring is tuned via backtest over 57 weeks of EIA data (Apr 2025–Mar 2026).
-    Key design choices:
-      - Momentum (price trend) uses both weekly and monthly signals to capture
-        both short-term swings and sustained moves.
-      - Inventory uses a 3-week trend (not just 1-week change) to reduce noise
-        from single-week revisions.
-      - NEUTRAL is eliminated as a prediction — the model always leans directional,
-        since oil rarely stays flat week-to-week.
-      - Spread thresholds are relaxed ($3/$6 instead of $2/$8) so the factor
-        actually contributes signal.
+    Each factor's score is decayed based on data staleness:
+    - Fresh data (within expected update frequency): full score
+    - Aging (1-2x expected): 75% score
+    - Stale (2-3x expected): 50% score
+    - Very stale (3x+): 25% score
     """
     analysis = {"steps": [], "signal": "NEUTRAL", "score": 0, "factors": []}
 
@@ -864,140 +905,113 @@ def _build_oil_analysis(wti_prices, inventory_data, gasoline_demand, dxy_data, b
     # Step 1: Price Trend (WTI) — dual timeframe momentum
     if wti_prices and len(wti_prices) >= 5:
         latest = wti_prices[0]["value"]
+        latest_date = wti_prices[0].get("date", "")
         week_ago = wti_prices[min(4, len(wti_prices)-1)]["value"]
         month_ago = wti_prices[min(20, len(wti_prices)-1)]["value"] if len(wti_prices) > 20 else week_ago
         weekly_chg = ((latest - week_ago) / week_ago * 100) if week_ago else 0
         monthly_chg = ((latest - month_ago) / month_ago * 100) if month_ago else 0
 
-        # Weekly momentum score
-        trend_score = 0
-        if weekly_chg > 4:
-            trend_score = 2
-        elif weekly_chg > 1.5:
-            trend_score = 1
-        elif weekly_chg < -4:
-            trend_score = -2
-        elif weekly_chg < -1.5:
-            trend_score = -1
+        trend_raw = 0
+        if weekly_chg > 4: trend_raw = 2
+        elif weekly_chg > 1.5: trend_raw = 1
+        elif weekly_chg < -4: trend_raw = -2
+        elif weekly_chg < -1.5: trend_raw = -1
+        if monthly_chg > 5 and trend_raw >= 0: trend_raw += 1
+        elif monthly_chg < -5 and trend_raw <= 0: trend_raw -= 1
+        trend_raw = max(-2, min(2, trend_raw))
 
-        # Monthly trend adds conviction when aligned
-        if monthly_chg > 5 and trend_score >= 0:
-            trend_score += 1
-        elif monthly_chg < -5 and trend_score <= 0:
-            trend_score -= 1
-
-        # Clamp to [-2, +2]
-        trend_score = max(-2, min(2, trend_score))
+        decay, age, freshness = _staleness_decay(latest_date, 1)  # daily data
+        trend_score = _apply_decay(trend_raw, decay)
 
         total_score += trend_score
+        stale_note = f" [{age}d old, {freshness}]" if freshness != "fresh" else ""
         analysis["steps"].append({
             "title": "WTI Price Trend",
             "icon": "chart-line",
             "value": f"${latest:.2f}/bbl",
-            "detail": f"Weekly: {weekly_chg:+.1f}% | Monthly: {monthly_chg:+.1f}%",
+            "detail": f"Weekly: {weekly_chg:+.1f}% | Monthly: {monthly_chg:+.1f}%{stale_note}",
             "score": trend_score,
             "explanation": f"WTI at ${latest:.2f}. {'Strong upward momentum — prices accelerating.' if trend_score == 2 else 'Rising prices signal bullish momentum.' if trend_score > 0 else 'Sharp decline — prices under heavy selling pressure.' if trend_score == -2 else 'Falling prices signal bearish pressure.' if trend_score < 0 else 'Prices stable in range.'}",
         })
-        analysis["factors"].append({"name": "Price Trend", "score": trend_score, "weight": "25%", "hint": "Weekly and monthly WTI price momentum. Rising prices = bullish, falling = bearish."})
+        analysis["factors"].append({"name": "Price Trend", "score": trend_score, "weight": "25%", "hint": "Weekly and monthly WTI price momentum. Rising prices = bullish, falling = bearish.", "data_age": age, "freshness": freshness, "raw_score": trend_raw})
 
-    # Step 2: Inventory Analysis — 3-week trend for noise reduction
-    # Note: EIA WCRSTUS1 values are in THOUSANDS of barrels
+    # Step 2: Inventory — EIA weekly, expected every 7 days
     if inventory_data and len(inventory_data) >= 3:
-        latest_inv = inventory_data[0]["value"] / 1000  # convert to millions
+        inv_date = inventory_data[0].get("date", "")
+        latest_inv = inventory_data[0]["value"] / 1000
         prev_inv = inventory_data[1]["value"] / 1000
         two_back = inventory_data[2]["value"] / 1000
         change_1w = latest_inv - prev_inv
-        change_3w = latest_inv - two_back  # 3-week cumulative in millions
+        change_3w = latest_inv - two_back
 
-        inv_score = 0
-        # Use 3-week cumulative trend (in millions of barrels)
-        if change_3w < -4:
-            inv_score = 2  # sustained draws = strongly bullish
-        elif change_3w < -1:
-            inv_score = 1  # moderate draws
-        elif change_3w > 4:
-            inv_score = -2  # sustained builds = strongly bearish
-        elif change_3w > 1:
-            inv_score = -1  # moderate builds
+        inv_raw = 0
+        if change_3w < -4: inv_raw = 2
+        elif change_3w < -1: inv_raw = 1
+        elif change_3w > 4: inv_raw = -2
+        elif change_3w > 1: inv_raw = -1
 
+        decay, age, freshness = _staleness_decay(inv_date, 7)  # weekly data
+        inv_score = _apply_decay(inv_raw, decay)
         total_score += inv_score
+        stale_note = f" [{age}d old, {freshness}]" if freshness != "fresh" else ""
         analysis["steps"].append({
             "title": "US Crude Inventory",
             "icon": "database",
             "value": f"{latest_inv:,.1f}M bbl",
-            "detail": f"1-week: {change_1w:+.1f}M | 3-week trend: {change_3w:+.1f}M bbl",
+            "detail": f"1-week: {change_1w:+.1f}M | 3-week trend: {change_3w:+.1f}M bbl{stale_note}",
             "score": inv_score,
-            "explanation": f"{'Sustained draws of {:.1f}M over 3 weeks — supply tightening, bullish.'.format(abs(change_3w)) if inv_score > 0 else 'Sustained builds of {:.1f}M over 3 weeks — supply growing, bearish.'.format(change_3w) if inv_score < 0 else '3-week inventory trend is flat — no supply signal.'}",
+            "explanation": f"{'Sustained draws of {:.1f}M over 3 weeks — supply tightening, bullish.'.format(abs(change_3w)) if inv_raw > 0 else 'Sustained builds of {:.1f}M over 3 weeks — supply growing, bearish.'.format(change_3w) if inv_raw < 0 else '3-week inventory trend is flat — no supply signal.'}" + (f" (Score reduced: data is {age} days old)" if decay < 1 else ""),
         })
-        analysis["factors"].append({"name": "Inventory", "score": inv_score, "weight": "20%", "hint": "EIA weekly US crude oil stocks. Draws (falling) = supply tight = bullish. Builds (rising) = oversupply = bearish. Uses 3-week trend."})
-    elif inventory_data and len(inventory_data) >= 2:
-        latest_inv = inventory_data[0]["value"] / 1000
-        prev_inv = inventory_data[1]["value"] / 1000
-        change = latest_inv - prev_inv
-        inv_score = 0
-        if change < -3:
-            inv_score = 2
-        elif change < -0.5:
-            inv_score = 1
-        elif change > 3:
-            inv_score = -2
-        elif change > 0.5:
-            inv_score = -1
-        total_score += inv_score
-        analysis["steps"].append({
-            "title": "US Crude Inventory",
-            "icon": "database",
-            "value": f"{latest_inv:,.1f}M bbl",
-            "detail": f"Change: {change:+.1f}M bbl",
-            "score": inv_score,
-            "explanation": f"{'Draw of {:.1f}M barrels — supply tightening.'.format(abs(change)) if change < 0 else 'Build of {:.1f}M barrels — supply growing.'.format(change)}",
-        })
-        analysis["factors"].append({"name": "Inventory", "score": inv_score, "weight": "20%", "hint": "EIA weekly US crude oil stocks. Draws (falling) = supply tight = bullish. Builds (rising) = oversupply = bearish. Uses 3-week trend."})
+        analysis["factors"].append({"name": "Inventory", "score": inv_score, "weight": "20%", "hint": "EIA weekly US crude oil stocks. Draws (falling) = supply tight = bullish. Builds (rising) = oversupply = bearish. Uses 3-week trend.", "data_age": age, "freshness": freshness, "raw_score": inv_raw})
 
-    # Step 3: Gasoline Demand
+    # Step 3: Gasoline Demand — EIA weekly
     if gasoline_demand and len(gasoline_demand) >= 2:
+        gas_date = gasoline_demand[0].get("date", "")
         latest_gas = gasoline_demand[0]["value"]
         prev_gas = gasoline_demand[1]["value"]
         gas_chg = ((latest_gas - prev_gas) / prev_gas * 100) if prev_gas else 0
 
-        gas_score = 0
-        if gas_chg > 1:
-            gas_score = 1
-        elif gas_chg < -1:
-            gas_score = -1
+        gas_raw = 0
+        if gas_chg > 1: gas_raw = 1
+        elif gas_chg < -1: gas_raw = -1
 
+        decay, age, freshness = _staleness_decay(gas_date, 7)
+        gas_score = _apply_decay(gas_raw, decay)
         total_score += gas_score
+        stale_note = f" [{age}d old, {freshness}]" if freshness != "fresh" else ""
         analysis["steps"].append({
             "title": "US Gasoline Demand",
             "icon": "gas-pump",
             "value": f"{latest_gas:,.0f}K bbl/day",
-            "detail": f"Week-over-week: {gas_chg:+.1f}%",
+            "detail": f"Week-over-week: {gas_chg:+.1f}%{stale_note}",
             "score": gas_score,
-            "explanation": f"{'Rising demand supports oil prices.' if gas_score > 0 else 'Weakening demand pressures prices lower.' if gas_score < 0 else 'Demand holding steady.'}",
+            "explanation": f"{'Rising demand supports oil prices.' if gas_raw > 0 else 'Weakening demand pressures prices lower.' if gas_raw < 0 else 'Demand holding steady.'}" + (f" (Score reduced: data is {age} days old)" if decay < 1 else ""),
         })
-        analysis["factors"].append({"name": "Demand", "score": gas_score, "weight": "15%", "hint": "US gasoline demand (weekly EIA data). Rising demand supports oil prices. Falling demand = bearish. Threshold: >1% change."})
+        analysis["factors"].append({"name": "Demand", "score": gas_score, "weight": "15%", "hint": "US gasoline demand (weekly EIA data). Rising demand supports oil prices. Falling demand = bearish. Threshold: >1% change.", "data_age": age, "freshness": freshness, "raw_score": gas_raw})
 
-    # Step 4: US Dollar Impact
+    # Step 4: US Dollar Impact — FRED daily
     if dxy_data:
         dxy_val = dxy_data.get("value")
         dxy_dir = dxy_data.get("direction")
+        dxy_date = dxy_data.get("date", "")
         if dxy_val is not None:
-            dxy_score = 0
-            if dxy_dir == "up":
-                dxy_score = -1
-            elif dxy_dir == "down":
-                dxy_score = 1
+            dxy_raw = 0
+            if dxy_dir == "up": dxy_raw = -1
+            elif dxy_dir == "down": dxy_raw = 1
 
+            decay, age, freshness = _staleness_decay(dxy_date, 1)  # daily
+            dxy_score = _apply_decay(dxy_raw, decay)
             total_score += dxy_score
+            stale_note = f" [{age}d old, {freshness}]" if freshness != "fresh" else ""
             analysis["steps"].append({
                 "title": "US Dollar Index (DXY)",
                 "icon": "dollar-sign",
                 "value": f"{dxy_val:.2f}",
-                "detail": f"Trend: {'Rising' if dxy_dir == 'up' else 'Falling' if dxy_dir == 'down' else 'Flat'}",
+                "detail": f"Trend: {'Rising' if dxy_dir == 'up' else 'Falling' if dxy_dir == 'down' else 'Flat'}{stale_note}",
                 "score": dxy_score,
-                "explanation": f"{'Strong dollar makes oil more expensive globally, reducing demand.' if dxy_score < 0 else 'Weak dollar makes oil cheaper globally, boosting demand.' if dxy_score > 0 else 'Dollar neutral — no impact on oil pricing.'}",
+                "explanation": f"{'Strong dollar makes oil more expensive globally, reducing demand.' if dxy_raw < 0 else 'Weak dollar makes oil cheaper globally, boosting demand.' if dxy_raw > 0 else 'Dollar neutral — no impact on oil pricing.'}" + (f" (Score reduced: data is {age} days old)" if decay < 1 else ""),
             })
-            analysis["factors"].append({"name": "Dollar", "score": dxy_score, "weight": "15%", "hint": "US Dollar Index (DXY). Strong dollar makes oil expensive for foreign buyers = bearish. Weak dollar = bullish for oil."})
+            analysis["factors"].append({"name": "Dollar", "score": dxy_score, "weight": "15%", "hint": "US Dollar Index (DXY). Strong dollar makes oil expensive for foreign buyers = bearish. Weak dollar = bullish for oil.", "data_age": age, "freshness": freshness, "raw_score": dxy_raw})
 
     # Step 5: WTI vs Brent Spread — relaxed thresholds
     if wti_prices and brent_value is not None:
@@ -1022,9 +1036,7 @@ def _build_oil_analysis(wti_prices, inventory_data, gasoline_demand, dxy_data, b
         })
         analysis["factors"].append({"name": "Brent-WTI Spread", "score": spread_score, "weight": "10%", "hint": "Gap between Brent and WTI prices. Wide spread (>$6) = global supply tighter than US = bullish for WTI. Narrow (<$1) = global weakness."})
 
-    # Step 6: Spot-Futures Divergence — EIA physical vs traded futures
-    # When EIA spot is much higher than futures, physical market is tighter than
-    # paper market expects → bullish. When spot is lower → bearish.
+    # Step 6: Spot-Futures Divergence — EIA spot (daily, lagged) vs Yahoo futures (live)
     if eia_wti_spot and wti_prices and len(eia_wti_spot) >= 1 and len(wti_prices) >= 1:
         eia_latest = eia_wti_spot[0]["value"]
         futures_latest = wti_prices[0]["value"]
@@ -1032,26 +1044,26 @@ def _build_oil_analysis(wti_prices, inventory_data, gasoline_demand, dxy_data, b
         futures_date = wti_prices[0]["date"]
         divergence_pct = ((eia_latest - futures_latest) / futures_latest * 100)
 
-        div_score = 0
-        if divergence_pct > 10:
-            div_score = 2   # huge backwardation — physical extremely tight
-        elif divergence_pct > 4:
-            div_score = 1   # moderate backwardation — bullish
-        elif divergence_pct < -10:
-            div_score = -2  # deep contango — oversupply
-        elif divergence_pct < -4:
-            div_score = -1  # moderate contango — bearish
+        div_raw = 0
+        if divergence_pct > 10: div_raw = 2
+        elif divergence_pct > 4: div_raw = 1
+        elif divergence_pct < -10: div_raw = -2
+        elif divergence_pct < -4: div_raw = -1
 
+        # EIA spot has inherent lag — decay based on EIA date staleness
+        decay, age, freshness = _staleness_decay(eia_date, 1)  # daily expected
+        div_score = _apply_decay(div_raw, decay)
         total_score += div_score
+        stale_note = f" [EIA {age}d old, {freshness}]" if freshness != "fresh" else ""
         analysis["steps"].append({
             "title": "Spot vs Futures Divergence",
             "icon": "balance-scale",
             "value": f"{divergence_pct:+.1f}%",
-            "detail": f"EIA Spot ${eia_latest:.2f} ({eia_date}) vs Futures ${futures_latest:.2f} ({futures_date})",
+            "detail": f"EIA Spot ${eia_latest:.2f} ({eia_date}) vs Futures ${futures_latest:.2f} ({futures_date}){stale_note}",
             "score": div_score,
-            "explanation": f"{'Physical spot is ${:.0f} ABOVE futures — real supply tightness at Cushing. Strong bullish signal that futures will catch up.'.format(eia_latest - futures_latest) if div_score >= 2 else 'Spot premium over futures — physical market tighter than paper market expects. Bullish.' if div_score > 0 else 'Spot trading BELOW futures — physical oversupply or weak demand at delivery points. Bearish.' if div_score < 0 else 'Spot and futures roughly aligned — no divergence signal.'}",
+            "explanation": f"{'Physical spot is ${:.0f} ABOVE futures — real supply tightness at Cushing. Strong bullish signal that futures will catch up.'.format(eia_latest - futures_latest) if div_raw >= 2 else 'Spot premium over futures — physical market tighter than paper market expects. Bullish.' if div_raw > 0 else 'Spot trading BELOW futures — physical oversupply or weak demand at delivery points. Bearish.' if div_raw < 0 else 'Spot and futures roughly aligned — no divergence signal.'}" + (f" (Score reduced from {div_raw:+d} to {div_score:+d}: EIA data is {age} days old)" if decay < 1 and div_raw != 0 else ""),
         })
-        analysis["factors"].append({"name": "Spot-Futures", "score": div_score, "weight": "10%", "hint": "Compares EIA Cushing spot price vs NYMEX futures. Spot > Futures = physical tightness = bullish. Spot < Futures = oversupply = bearish."})
+        analysis["factors"].append({"name": "Spot-Futures", "score": div_score, "weight": "10%", "hint": "Compares EIA Cushing spot price vs NYMEX futures. Spot > Futures = physical tightness = bullish. Spot < Futures = oversupply = bearish.", "data_age": age, "freshness": freshness, "raw_score": div_raw})
 
     # Step 7: Mean Reversion
     if wti_prices and len(wti_prices) >= 5:
