@@ -1618,8 +1618,35 @@ def _do_refresh_all():
     _cache["exec_boe_events"] = _fetch_boe_events()
     _cache["exec_news"] = _fetch_exec_news()
     _cache["exec_fetched_at"] = time.time()
+
+    # Daily oil snapshot — ensures no gaps even if nobody loads the Oil tab
+    _ensure_daily_oil_snapshot()
+
     logger.info("All data refresh complete.")
     _save_cache_to_disk()
+
+
+def _ensure_daily_oil_snapshot():
+    """Fetch oil data and save snapshot once per calendar day."""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    # Check if today's snapshot already exists
+    try:
+        with open(OIL_HISTORY_FILE, "r") as f:
+            history = json.load(f)
+        if any(h.get("date") == today for h in history):
+            return  # already have today's snapshot
+    except (FileNotFoundError, json.JSONDecodeError):
+        pass
+
+    # No snapshot for today — fetch and save
+    logger.info("Daily oil snapshot: fetching data for %s", today)
+    try:
+        oil_data = _fetch_all_oil_data()
+        with _lock:
+            _cache["oil_data"] = oil_data
+            _cache["oil_fetched_at"] = time.time()
+    except Exception as exc:
+        logger.warning("Daily oil snapshot failed: %s", exc)
 
 
 _bg_refresh_running = False
